@@ -3,9 +3,14 @@ from opensearchpy.helpers import bulk
 import json
 
 
+OPENSEARCH_HOST = 'search-prashagr-def-guide-lslkr2b22fkoztdtlenuu2hro4.us-east-1.es.amazonaws.com'
+OPENSEARCH_PORT = 443
+OPENSEARCH_AUTH = ('admin', 'DefGuide123!')
+
+
 os_client = OpenSearch(
-  hosts = [{'host': 'search-prashagr-def-guide-lslkr2b22fkoztdtlenuu2hro4.us-east-1.es.amazonaws.com', 'port': 443}],
-  http_auth = ('admin', 'DefGuide123!'),
+  hosts = [{'host': OPENSEARCH_HOST, 'port': OPENSEARCH_PORT}],
+  http_auth = OPENSEARCH_AUTH,
   use_ssl = True,
   verify_certs = False,
   ssl_assert_hostname = False,
