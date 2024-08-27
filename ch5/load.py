@@ -1,11 +1,15 @@
-from opensearchpy import OpenSearch
-from opensearchpy.helpers import bulk
+import os
 import json
 
 
-OPENSEARCH_HOST = 'search-prashagr-def-guide-lslkr2b22fkoztdtlenuu2hro4.us-east-1.es.amazonaws.com'
-OPENSEARCH_PORT = 443
-OPENSEARCH_AUTH = ('admin', 'DefGuide123!')
+from opensearchpy import OpenSearch
+from opensearchpy.helpers import bulk
+
+
+OPENSEARCH_HOST = os.environ.get('OPENSEARCH_HOST', 'localhost')
+OPENSEARCH_PORT = os.environ.get('OPENSEARCH_PORT', 443)
+OPENSEARCH_AUTH = (os.environ.get('OPENSEARCH_ADMIN_USER', 'admin'),
+                   os.environ.get('OPENSEARCH_ADMIN_PASSWORD', ''))
 
 
 os_client = OpenSearch(
