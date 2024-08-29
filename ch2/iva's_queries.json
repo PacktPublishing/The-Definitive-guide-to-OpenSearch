@@ -1,0 +1,25 @@
+# Index Data: 
+
+POST /fashion/_doc 
+{ 
+  "product_id": "123456", 
+  "name": "Floral Print Maxi Dress", 
+  "category": "Dresses", 
+  "price": 59.99, 
+  "color": "Blue", 
+  "size": ["S", "M", "L"], 
+  "description": "Elevate your summer style with this gorgeous floral maxi dress. Featuring a vibrant blue hue and a flattering silhouette, this dress is perfect for any outdoor occasion.", 
+  "tags": ["floral", "maxi", "summer", "blue"], 
+  "rating": 4.8, 
+  "in_stock": true 
+} 
+
+# Search Data 
+GET /fashion/_search 
+{ 
+  "query": { 
+    "match": { 
+      "description": "floral" 
+    } 
+  } 
+} 
