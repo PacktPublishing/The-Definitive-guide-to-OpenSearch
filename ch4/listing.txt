@@ -1,0 +1,413 @@
+GET _search
+{
+  "query": {
+    "match_all": {}
+  }
+}
+
+
+POST first_index/_doc/1
+{ 
+  "an_integer_field": 12345, 
+  "a_string_field": "Mary had a little lamb" }
+
+
+GET _cat/indices/first_index?v&h=health,status,index,pri,rep
+
+
+POST _bulk
+{ "create": { "_index": "first_index", "_id": "2" } }
+{ "an_integer_field": 23456,  "a_string_field": "the quick brown fox" }
+{ "create": { "_index": "first_index", "_id": "3" } }
+{ "an_integer_field": 23456,  "a_string_field": "Lorem ipsum" }
+
+
+GET first_index/_mapping
+
+
+PUT index_with_mapping
+{
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "an_integer_field": { "type": "integer"},
+      "a_string_field": { "type": "text" }
+}}}
+
+
+PUT index_with_shard_count
+{
+  "settings": {
+    "index.number_of_shards": 1,
+    "index.number_of_replicas": 1 },
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "an_integer_field": { "type": "integer"},
+      "a_string_field": { "type": "text" }
+}}}
+
+
+PUT _index_template/logs_template
+{
+  "index_patterns": ["logs-*"],
+  "priority": 0,
+  "template": {
+    "mappings": {
+      "properties": {
+        "timestamp": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis"
+        },
+        "value": {
+          "type": "double"
+}}}}}
+
+
+
+POST logs-2024.07.13/_doc/1
+{
+  "timestamp": "2024-07-13 14:17:20",
+  "host": "10.198.10.16"
+}
+
+
+PUT _component_template/component_template_1
+{
+  "template": {
+    "mappings": {
+      "properties": {
+        "timestamp": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis"
+}}}}}
+
+PUT _component_template/component_template_2
+{
+  "template": {
+    "mappings": {
+      "properties": {
+        "value": {
+          "type": "double"
+}}}}}
+
+PUT _index_template/logs_template
+{
+  "index_patterns": [ "logs-*" ],
+  "priority": 100,
+  "composed_of": [
+    "component_template_1",
+    "component_template_2"
+  ]
+}
+
+
+GET _analyze
+{
+  "text": ["OpenSearch standard analyzer 1234.4. For text"],
+  "analyzer": "standard"
+}
+
+
+GET _analyze
+{
+  "text": ["OpenSearch standard analyzer 1234.4. For text"],
+  "analyzer": "english"
+}
+
+
+PUT index_with_custom_analyzer
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "text_with_urls": {
+          "type": "custom", 
+          "tokenizer": "path_hierarchy",
+          "char_filter": [ "html_strip" ],
+          "filter": [
+            "lowercase"
+          ]}}}},
+  "mappings": {
+    "properties": {
+      "a_custom_analyzed_text_field": {
+        "type": "text",
+        "analyzer": "text_with_urls"
+      }}}}
+
+
+GET index_with_custom_analyzer/_analyze
+{
+  "text": "https://opensearch.org/project",
+  "analyzer": "text_with_urls"
+}
+
+
+GET _analyze
+{
+  "text": "OpenSearch",
+  "tokenizer": "ngram"
+}
+
+
+GET first_index/_search
+{
+  "query": { "match": {
+    "a_string_field": "Mary"
+}}}
+
+
+GET first_index/_search
+{
+  "query": { "match": {
+    "a_string_field.keyword": "Mary"
+}}}
+
+
+GET first_index/_search
+{
+  "query": { "match": {
+    "a_string_field.keyword": "Mary had a little lamb"
+}}}
+
+
+PUT index_with_custom_normalizer 
+{
+  "settings": {
+    "analysis": {
+      "normalizer": {
+        "normalized_keyword": {
+          "type": "custom",
+          "filter": [ "asciifolding", "lowercase" ]
+  }}}},
+  "mappings": {
+    "properties": { 
+      "custom_normalized_keyword": {
+        "type": "keyword",
+        "normalizer": "normalized_keyword"
+}}}}
+
+
+POST index_with_custom_normalizer/_doc/1
+{
+  "custom_normalized_keyword": "Naïve string"
+}
+
+
+GET index_with_custom_normalizer/_search
+{
+  "query": { "match": {
+    "custom_normalized_keyword": "naive string"
+}}}
+
+
+PUT vector_index
+{
+  "settings": {
+    "index.knn": true
+  },
+  "mappings": {
+    "properties": {
+      "knn_field": {
+        "type": "knn_vector",
+        "dimension": 2,
+        "method": {
+          "engine": "faiss",
+          "space_type": "l2",
+          "name": "hnsw",
+          "parameters": {
+            "ef_construction": 128,
+            "m": 24
+          }}}}}}
+
+
+POST vector_index/_bulk
+{ "create": { "_id": "1" } }
+{ "knn_field": [0, 0] }
+{ "create": { "_id": "2" } }
+{ "knn_field": [100, 100] }
+
+
+GET vector_index/_search
+{
+  "query": {
+    "knn": {
+      "knn_field": {
+        "vector": [1, 1],
+        "k": 1
+      }}}}
+
+
+POST index_with_nesting/_doc/1
+{ "author": [{ "first": "Jon", "last": "Smith" },
+             { "first": "Jane", "last": "Doe" }
+            ]}
+
+
+GET index_with_nesting/_search
+{
+  "query": { "bool": { "must": [
+    {"match": { "author.first": "Jon" }}
+  ]}}
+}
+
+
+GET index_with_nesting/_search
+{
+  "query": { "bool": { "must": [
+    { "match": { "author.first": "Jon" }},
+    { "match": { "author.last": "Doe" }}
+]}}}
+
+
+DELETE index_with_nesting
+PUT index_with_nesting/
+{
+  "mappings": {
+    "properties": {
+      "author": { "type": "nested" }
+}}}
+
+
+POST index_with_nesting/_doc/1
+{ "author": [{ "first": "Jon", "last": "Smith" },
+             { "first": "Jane", "last": "Doe" }
+            ]}
+
+
+GET index_with_nesting/_search
+{
+  "query": {
+    "nested": { "path": "author",
+                "query": { "bool": {
+                  "must": [
+                    { "match": {
+                      "author.first": "Jon" }},
+                    { "match": {
+                      "author.last": "Doe" }}
+]}}}}}
+
+
+GET index_with_nesting/_search
+{
+  "query": {
+    "nested": { "path": "author",
+                "query": { "bool": {
+                  "must": [
+                    { "match": {
+                      "author.first": "Jon" }},
+                    { "match": {
+                      "author.last": "Smith" }}
+]}}}}}
+
+
+PUT flat_object_index 
+{
+  "mappings": {
+    "properties": {
+      "object_field": { 
+        "type": "flat_object" }}}}
+
+
+POST flat_object_index/_doc/1
+{ "object_field": 
+  { "title": "Iron Man",
+    "release_details": { "year": 2008,
+                         "mpaa_rating": "PG",
+                         "box_office": 120000000 }}}
+
+
+GET flat_object_index/_search
+{
+  "query": {"match": {
+    "object_field.release_details.mpaa_rating": "PG"
+}}}
+
+
+PUT geo_index
+{
+  "mappings": {
+    "properties": {
+      "name": { "type": "keyword" },
+      "pt_location": { "type": "geo_point" },
+      "sh_location": { "type": "geo_shape" }
+}}}
+
+POST geo_index/_doc/1
+{ "name": "San Francisco City Hall",
+  "pt_location": { "lat": 37.78, "lon": -122.42 },
+  "sh_location": {
+    "type": "polygon",
+    "coordinates": [[
+      [37.7799,-122.4199],
+      [37.7799,-122.4185],
+      [37.7787,-122.4185],
+      [37.7787,-122.4199],
+      [37.7799,-122.4199]
+]]}}
+
+POST geo_index/_doc/2
+{ "name": "New York City Hall",
+  "pt_location": "dr5regw2zr49",
+  "sh_location": {
+    "type": "polygon",
+    "coordinates": [[
+      [40.7123,-74.0066],
+      [40.7123,-74.0055],
+      [40.7132,-74.0055],
+      [40.7132,-74.0066],
+      [40.7123,-74.0066]
+      ]]}}
+
+
+GET geo_index/_search
+{
+  "query": {
+    "bool": {
+      "must": [{"match_all": {}}],
+      "filter": [
+        {"geo_bounding_box": {
+          "pt_location": {
+            "top_left": {
+              "lat": 49.5904,
+              "lon": -125.0011
+            },
+            "bottom_right": {
+              "lat": 24.9493,
+              "lon": -66.9326
+}}}}]}}}
+
+
+PUT percolate_index
+{
+  "mappings": {
+    "properties": {
+      "stored_query": { "type": "percolator" },
+      "bedrooms": { "type": "integer" },
+      "street_address": { "type": "text" }
+}}}
+
+
+POST percolate_index/_doc/1
+{
+  "stored_query": {
+    "bool": {
+      "must": [
+        { "range": { "bedrooms": { "gte": 2 } } },
+        { "match": { "street_address": "cherry" } }
+]}}}
+
+
+GET percolate_index/_search
+{
+  "query": {
+    "bool": {
+      "filter": 
+        {
+          "percolate": {
+            "field": "stored_query",
+            "document": {
+              "bedrooms": 4,
+              "street_address": "123 Cherry Street, apt 4b"
+}}}}}}
+
