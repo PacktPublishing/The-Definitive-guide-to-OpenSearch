@@ -324,6 +324,56 @@ GET flat_object_index/_search
 }}}
 
 
+PUT join_index
+{
+  "mappings": {
+    "properties": {
+      "product_offers_join": {
+        "type": "join",
+        "relations": {
+          "product": "offer"
+}}}}}
+
+
+POST join_index/_doc/1
+{
+  "product_name": "A1-brand powerful household cleaner",
+  "product_offers_join": {
+    "name": "product" 
+}}
+
+
+POST join_index/_doc/2?routing=1
+{
+  "name": "Al's grocery",
+  "price": 1.47,
+  "product_offers_join": {
+    "name": "offer", 
+    "parent": "1"
+}}
+
+
+POST join_index/_doc/3?routing=1
+{
+  "name": "Jen's online store",
+  "price": 1.44,
+  "product_offers_join": {
+    "name": "offer", 
+    "parent": "1"
+}}
+
+
+GET join_index/_search
+{
+  "query" : {
+    "has_parent": {
+      "parent_type":"product",
+      "query": {
+        "match": {
+          "name": "A1-brand powerful household cleaner"
+}}}}}
+
+
 PUT geo_index
 {
   "mappings": {
