@@ -75,7 +75,10 @@ if __name__=='__main__':
         "title": {"type": "text"},
         "year": {"type": "integer"},
         "duration": {"type": "integer"},
-        "genres": {"type": "text"},
+        "genres": {"type": "text",
+                   "fields": {
+                     "keyword": {"type": "keyword", "ignore_above": 256}
+                   }},
         "plot": {"type": "text"},
         "rating": {"type": "float"},
         "vote": {"type": "integer"},
@@ -91,6 +94,8 @@ if __name__=='__main__':
     nline = 0
     buffer = []
     for line in f:
+      if not line:
+        break
       data = json.loads(line)
       buffer.append(
           { 
