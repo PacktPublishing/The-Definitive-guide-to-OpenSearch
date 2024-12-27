@@ -7,7 +7,7 @@ from opensearchpy.helpers import bulk
 
 
 OPENSEARCH_HOST = os.environ.get('OPENSEARCH_HOST', 'localhost')
-OPENSEARCH_PORT = os.environ.get('OPENSEARCH_PORT', 443)
+OPENSEARCH_PORT = os.environ.get('OPENSEARCH_PORT', 9200)
 OPENSEARCH_AUTH = (os.environ.get('OPENSEARCH_ADMIN_USER', 'admin'),
                    os.environ.get('OPENSEARCH_ADMIN_PASSWORD', ''))
 
@@ -64,20 +64,62 @@ def clean_data(data):
 
 if __name__=='__main__':
   os_client.indices.delete(index='movies', ignore=[400, 404])
-  os_client.indices.create(index='movies', body={
+  os_client.indices.create(index='movies', body=
+  {
     "settings": {
       "number_of_shards": 1,
-      "number_of_replicas": 1
+      "number_of_replicas": 1,
+      "max_ngram_diff": 7,
+      "analysis": {
+        "filter": {
+          "reverse_filter": {
+            "type": "reverse"
+          }
+        },
+        "tokenizer": {
+          "ngram_tokenizer": {
+            "type": "ngram",
+            "min_gram": 3,
+            "max_gram": 10,
+            "token_chars": ["letter", "digit" ]
+          },
+          "edge_ngram_tokenizer": {
+            "type": "edge_ngram",
+            "min_gram": 3,
+            "max_gram": 10,
+            "token_chars": ["letter", "digit" ]
+          }
+        },
+        "analyzer": {
+          "my_reverse_analyzer": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [ "lowercase", "reverse_filter" ]
+          },
+          "edge_ngram_analyzer": {
+            "tokenizer": "edge_ngram_tokenizer",
+            "filter": [ "lowercase" ]
+          }
+        }
+      }
     },
     "mappings": {
       "properties": {
         "id": {"type": "integer"},
-        "title": {"type": "text"},
+        "title": {"type": "text",
+                  "copy_to": ["reverse_title", "completions_title"],
+                   "fields": {
+                     "keyword": {"type": "keyword", 
+                                 "ignore_above": 256}
+                   }},
+        "reverse_title": {"type": "text",
+                          "analyzer": "my_reverse_analyzer"},
+        "completions_title": {"type": "completion"},
         "year": {"type": "integer"},
         "duration": {"type": "integer"},
         "genres": {"type": "text",
                    "fields": {
-                     "keyword": {"type": "keyword", "ignore_above": 256}
+                    "keyword": {"type": "keyword", "ignore_above": 256}
                    }},
         "plot": {"type": "text"},
         "rating": {"type": "float"},
@@ -85,10 +127,11 @@ if __name__=='__main__':
         "revenue": {"type": "float"},
         "thumbnail": {"type": "keyword"},
         "directors": {"type": "text"},
-        "actors": {"type": "text"}
-      }
+        "actors": {"type": "text", "copy_to": ["completions_actors", "edge_ngram_actors"]},
+        "completions_actors": {"type": "completion"},
+        "edge_ngram_actors": {"type": "text", "analyzer": "edge_ngram_analyzer"}
     }
-  })
+  }})
 
   with open('movies_100k_LLM_generated.json', 'r') as f:
     nline = 0
