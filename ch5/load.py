@@ -74,6 +74,11 @@ if __name__=='__main__':
         "filter": {
           "reverse_filter": {
             "type": "reverse"
+          },
+          "shingle_filter": {
+            "type": "shingle",
+            "min_shingle_size": 2,
+            "max_shingle_size": 3
           }
         },
         "tokenizer": {
@@ -99,6 +104,14 @@ if __name__=='__main__':
           "edge_ngram_analyzer": {
             "tokenizer": "edge_ngram_tokenizer",
             "filter": [ "lowercase" ]
+          },
+          "trigram_analyzer": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+              "lowercase",
+              "shingle"
+            ]
           }
         }
       }
@@ -107,13 +120,18 @@ if __name__=='__main__':
       "properties": {
         "id": {"type": "integer"},
         "title": {"type": "text",
-                  "copy_to": ["reverse_title", "completions_title"],
+                  "copy_to": ["reverse_title", "completions_title", "sayt_title"],
                    "fields": {
-                     "keyword": {"type": "keyword", 
-                                 "ignore_above": 256}
+                      "keyword": {"type": "keyword", 
+                                  "ignore_above": 256},
+                      "trigram": {
+                        "type": "text",
+                        "analyzer": "trigram_analyzer"
+                      }
                    }},
         "reverse_title": {"type": "text",
                           "analyzer": "my_reverse_analyzer"},
+        "sayt_title": {"type": "search_as_you_type"},
         "completions_title": {"type": "completion"},
         "year": {"type": "integer"},
         "duration": {"type": "integer"},
