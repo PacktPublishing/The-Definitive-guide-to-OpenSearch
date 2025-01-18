@@ -1,0 +1,76 @@
+{
+  "$schema": "https://vega.github.io/schema/vega/v5.json",
+  "description": "Scatter plot of movie ratings vs. running time",
+  "width": 600,
+  "height": 400,
+  "padding": 5,
+
+  "data": [
+    {
+      "name": "source",
+      "url": {
+        "%context%": true,
+        "index": "my-movie-index",
+        "body": {
+          "_source": ["rating", "running_time_secs", "genres"],
+          "size": 10000
+        }
+      },
+      "format": {"property": "hits.hits"}
+    }
+  ],
+
+  "scales": [
+    {
+      "name": "xscale",
+      "type": "linear",
+      "domain": {"data": "source", "field": "_source.running_time_secs"},
+      "range": "width"
+    },
+    {
+      "name": "yscale",
+      "type": "linear",
+      "domain": {"data": "source", "field": "_source.rating"},
+      "range": "height"
+    },
+    {
+      "name": "color",
+      "type": "ordinal",
+      "domain": {"data": "source", "field": "_source.genres"},
+      "range": {"scheme": "category10"}
+    }
+  ],
+
+  "axes": [
+    {
+      "scale": "xscale",
+      "orient": "bottom",
+      "title": "Running Time (Seconds)"
+    },
+    {
+      "scale": "yscale",
+      "orient": "left",
+      "title": "Rating"
+    }
+  ],
+
+  "marks": [
+    {
+      "type": "symbol",
+      "from": {"data": "source"},
+      "encode": {
+        "enter": {
+          "x": {"scale": "xscale", "field": "_source.running_time_secs"},
+          "y": {"scale": "yscale", "field": "_source.rating"},
+          "fillOpacity": {"value": 0.6},
+          "size": {"value": 50},
+          "strokeWidth": {"value": 1},
+          "strokeOpacity":{"value" :0.7},
+          // Optional: Color points based on genres
+          // Uncomment below if you want genre-based coloring
+          //"fill":{"scale":"color","field":"_source.genres"}
+        }
+      }
+    }
+  ]
+}
