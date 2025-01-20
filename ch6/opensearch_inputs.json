@@ -1,0 +1,276 @@
+GET movies/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        { "match": { "title": "star wars" }},
+        { "range": { "year": { "gte": 1977, "lte": 1983 }}}
+      ],
+      "must_not": [],
+      "should": []
+ }}}
+
+
+GET movies/_search
+{
+  "explain": "true",
+  "_source": "title",
+  "query": {
+    "bool": {
+      "must": [
+        { "match": { "title": "star wars" }},
+        { "range": { "year": { "gte": 1977, "lte": 1983 }}}
+      ]
+}}}
+
+
+GET movies/_search
+{
+  "explain": "true",
+  "_source": "title",
+  "query": {
+    "bool": {
+      "must": [
+        { "match": { "title": "star wars" }}
+      ],
+      "filter": [
+        { "range": { "year": { "gte": 1977, "lte": 1983 }}}
+      ]
+  }}}
+
+GET movies/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"term": {"genres.keyword": {"value": "Sci-Fi"}}},
+        {"match": {"title": "star wars"}},
+        {"bool":
+          {"should": [
+            {"match": {"plot": "luke"}},
+            {"match": {"plot": "annakin" }},
+            {"match": {"plot": "leia"}},
+            {"match": {"directors": "george"}}
+          ],
+          "minimum_should_match": 1, 
+          "boost": 2
+        }}
+]}}}
+
+
+GET movies/_search
+{
+  "query": {
+    "boosting": {
+      "positive": {"match": {"title": "star wars"}},
+      "negative": {"prefix": {"title": "battle"}},
+      "negative_boost": 0.2
+}}}
+
+
+GET movies/_search
+{
+  "query": {
+    "dis_max": {
+      "tie_breaker": 0.7,
+      "boost": 1.2, 
+      "queries": [
+        {"terms": {"title": [ "star", "wars" ]}},
+        {"match": { "plot": "Luke Skywalker" }}
+]}}}
+
+
+GET movies/_search
+{
+  "explain": true,
+  "_source": "title", 
+  "query": {
+    "multi_match": {
+      "query": "star wars",
+      "fields": ["title", "plot"],
+      "type": "best_fields",
+      "tie_breaker": 0.3
+}}}
+
+
+GET movies/_search
+{
+  "explain": true,
+  "_source": "title", 
+  "query": {
+    "function_score": {
+      "query": {
+        "bool": {
+          "filter": [
+            {"term":
+              {"genres.keyword": {"value": "Sci-Fi"}}}
+          ], 
+          "should": [
+            {"match": {"plot": "star wars"}},
+            {"match_phrase": {"actors": "mark hamill"}},
+            {"match_phrase": {"actors": "carrie fisher"}},
+            {"match_phrase": {"directors": "george lucas"}}
+          ]
+        }
+      },
+      "functions": [
+        {"exp": {
+          "year": {
+            "origin": "2025",
+            "scale": "10"
+          }
+        }},
+        {"script_score": {
+          "script": "10 * doc['rating'].value"
+        }}
+      ], 
+      "score_mode": "sum",
+      "boost_mode": "replace"
+}}}
+
+
+GET movies/_search
+{
+  "_source": ["title", "genres"], 
+  "query": {"match": {"title": "star wars"}}
+}
+
+
+GET movies/_search
+{
+  "_source": ["title", "genres"], 
+  "query": {"match": {"title": "star wars"}},
+  "rescore": {
+    "window_size": 50,
+    "query": {
+      "rescore_query": {
+        "match": {"genres": "Documentary"}
+      },
+      "score_mode": "total",
+      "query_weight": 1,
+      "rescore_query_weight": 10
+}}}
+
+
+GET movies/_search
+{
+  "profile": true,
+  "size": 0, 
+  "query": {
+    "match": {
+      "title": "star wars"
+}}}
+
+
+PUT /movie_theaters
+{
+  "mappings": {
+    "properties": {
+      "name": {
+        "type": "text"
+      },
+      "location": {
+        "type": "geo_point"
+}}}}
+
+
+POST /movie_theaters/_doc/1
+{
+  "name": "The Blinking Marquee",
+  "location": {
+    "lat": 40.7128,
+    "lon": -74.006
+}}
+
+
+POST /movie_theaters/_doc/2
+{
+  "name": "Hot Flicks",
+  "location": {
+    "lat": 34.0522,
+    "lon": -118.2437
+}}
+
+
+GET /movie_theaters/_search
+{
+  "query": {
+    "bool": {
+      "filter": {
+        "geo_distance": {
+          "distance": "50miles",
+          "location": {
+            "lat": 40.73061,
+            "lon": -73.935242
+}}}}}}
+
+
+GET /movie_theaters/_search
+{
+  "query": {
+    "bool": {
+      "filter": {
+        "geo_polygon": {
+          "location": {
+            "points": [
+              {
+                "lat": 40.36,
+                "lon": -74.41
+              },
+              {
+                "lat": 40.36,
+                "lon": -73.42
+              },
+              {
+                "lat": 40.92,
+                "lon": -73.48
+              },
+              {
+                "lat": 40.90,
+                "lon": -74.44
+              }
+]}}}}}}
+
+
+GET movies/_search
+{
+  "size": 0, 
+  "query": {
+    "match": {
+      "title": "star wars"
+    }
+  },
+  "aggs": {
+    "genres": {
+      "terms": {
+        "field": "genres.keyword"
+}}}}
+
+
+POST movies/_doc/percolate1
+{
+  "saved_query": {
+    "bool": {
+      "must": [
+       {"match":
+         {"title": {"query": "star wars"}}}]
+}}}
+
+
+POST movies/_doc/percolate2
+{
+  "saved_query": {
+    "bool": {
+      "must": [{"term":
+        {"genres.keyword":
+          {"value": "Sci-Fi"}}}]
+}}}
+
+
+GET movies/_search
+{
+  "query": {
+    "percolate": {
+      "field": "saved_query",
+      "document": {"id": 645, "title": "Star Wars: Episode IV - A New Hope","year":"1977","duration":121,"genres":["Action", "Adventure", "Sci-Fi"],"plot":"Young farm boy Luke Skywalker discovers a hidden message from Princess Leia in a droid named R2-D2. With the help of smuggler Han Solo, Chewbacca, and Obi-Wan Kenobi, Luke sets out to rescue Leia from the tyrannical Galactic Empire.","rating":8.6,"like":9842,"revenue":460998507,"thumbnail":"https://m.media-amazon.com/images/M/MV5BYzA0MmMxZjQtYzcwZC00MGM3LThkNjEtYTAyNTBlZjI1NWUzXkEyXkFqcGdeQXVyMzI5ODg0OTE@._V1_UY98_CR15,0,67,98_AL_.jpg","directors":"George Lucas","actors":["Mark Hamill","Harrison Ford","Carrie Fisher"]}
+}}}
