@@ -1,0 +1,269 @@
+GET movies/_search
+{
+  "query": {
+    "match_all": {}
+}}
+
+
+GET movies/_search
+{
+  "from": 10,
+  "size": 10,
+  "query": {
+    "match_all": {}
+}}
+
+
+GET movies/_search?scroll=5m
+{
+  "size": 1000, 
+  "query": {"match_all": {}}
+}
+
+
+GET _search/scroll
+{
+  "scroll_id": "<REPLACE with your scroll ID>"
+}
+
+
+GET _search
+{
+  "from": 100,
+  "size": 20, 
+  "pit": {
+    "id": "<REPLACE with your pit id>"
+  },
+  "query": {
+    "simple_query_string": {
+      "query": "Star Wars",
+      "fields": ["title"]
+}}}
+
+
+GET movies/_search
+{
+  "size": 20,
+  "_source": "title",
+  "query": {
+    "simple_query_string": {
+      "query": "Star Wars",
+      "fields": ["title"]
+}}}
+
+
+GET movies/_search
+{
+  "size": 20,
+  "_source": ["title", "plot"], 
+  "query": {
+    "query_string": {
+      "query": "title:Episode AND plot:Lake~1"
+}}}
+
+
+GET movies/_search
+{
+  "size": 20,
+  "_source": "title", 
+  "query": {
+    "match": {
+      "title": "Star Wars"
+}}}
+
+
+GET movies/_search
+{
+  "size": 20,
+  "_source": "title", 
+  "query": {
+    "match": {
+      "title": {
+        "query": "Star Wars",
+        "operator": "and"
+}}}}
+
+
+GET movies/_search
+{
+  "size": 20,
+  "_source": "title", 
+  "query": {
+    "match_phrase": {
+      "title": "star wars"
+}}}
+
+
+GET movies/_search
+{
+  "_source": ["title", "plot"], 
+  "size": 20,
+  "query": {
+    "multi_match": {
+      "query": "Luke Skywalker",
+      "fields": ["title^4", "plot"]
+}}}
+
+
+GET movies/_search
+{
+  "size": 20,
+  "_source": "title", 
+  "query": {
+    "match_phrase_prefix": {
+      "title": "Star Wars Episo"
+}}}
+
+
+GET movies/_search
+{
+  "query": {
+    "term": {
+      "genres.keyword": {
+        "value": "Adventure"
+}}}}
+
+
+GET movies/_search
+{
+  "track_total_hits": true,
+  "query": {
+    "terms": {
+      "genres.keyword": [
+        "Documentary",
+        "Adventure"
+      ]
+}}}
+
+
+GET movies/_search
+{
+  "track_total_hits": true,
+  "query": {
+    "terms_set": {
+      "genres.keyword": {
+        "terms": [
+          "Documentary",
+          "Adventure"
+        ],
+        "minimum_should_match_script": {
+          "source": "2"
+}}}}}
+
+
+GET movies/_search
+{
+  "query": {
+    "range": {
+      "year": {
+        "gte": 2005,
+        "lte": 2008
+}}}}
+
+
+GET movies/_search
+{
+  "query": {
+    "prefix": {
+      "title.keyword": {
+        "value": "Star Wars"
+}}}}
+
+
+GET movies/_search
+{
+  "query": {
+    "prefix": {
+      "reverse_title": {
+        "value": "egneve"
+}}}}
+
+
+GET movies/_search
+{
+  "query": {
+    "regexp": {
+      "thumbnail": ".*UX.*"
+}}}
+
+
+GET movies/_search
+{
+  "_source": false, 
+  "query": {
+    "match": {
+      "plot": "Luke Skywalker"
+    }
+  },
+  "highlight": {
+    "fields": {
+      "plot": {}
+}}}
+
+
+GET movies/_search
+{
+  "suggest": {
+    "autocomplete": {
+      "prefix": "Star Wars",
+      "completion": {
+        "field": "completions_title",
+          "size": 10,
+          "fuzzy": {
+            "fuzziness": "AUTO"
+}}}}}
+
+
+GET movies/_search
+{
+  "query": {
+    "match_phrase_prefix": {
+      "sayt_title": "Star wa"
+}}}
+
+
+GET movies/_search
+{
+  "suggest": {
+    "spell-check": {
+      "text": "Epsiode",
+      "term": {
+        "field": "title"
+}}}}
+
+
+GET movies/_search
+{
+  "suggest": {
+    "phrase-check": {
+      "text": "stra wars epsiode",
+      "phrase": {
+        "field": "title.trigram"
+}}}}
+
+
+POST _scripts/year_range_query
+{
+  "script": {
+    "lang": "mustache",
+    "source": {
+      "from": "{{from}}{{^from}}0{{/from}}",
+      "size": "{{size}}{{^size}}10{{/size}}",
+      "query": {
+        "bool": {
+          "must": [
+            { "match": { "title": "{{title}}"}},
+            { "range": { "year": { "gte": "{{year_min}}", "lte": "{{year_max}}" }}}
+]}}}}}
+
+
+GET movies/_search/template
+{
+  "id": "year_range_query",
+  "params": {
+    "title": "Star Wars",
+    "year_min": 1970,
+    "year_max": 1980
+}}
+
+

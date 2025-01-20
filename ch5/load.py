@@ -135,6 +135,8 @@ if __name__=='__main__':
         "completions_title": {"type": "completion"},
         "year": {"type": "integer"},
         "duration": {"type": "integer"},
+        "genres1": {"type": "keyword"},
+        "genres2": {"type": "keyword"},
         "genres": {"type": "text",
                    "fields": {
                     "keyword": {"type": "keyword", "ignore_above": 256}
@@ -144,12 +146,20 @@ if __name__=='__main__':
         "vote": {"type": "integer"},
         "revenue": {"type": "float"},
         "thumbnail": {"type": "keyword"},
-        "directors": {"type": "text"},
-        "actors": {"type": "text", "copy_to": ["completions_actors", "edge_ngram_actors"]},
+        "directors": {"type": "text",
+                      "fields": {
+                        "keyword": {"type": "keyword", "ignore_above": 256}
+                   }},
+        "actors": {"type": "text",
+                   "fields": {
+                    "keyword": {"type": "keyword", "ignore_above": 256}
+                   }, "copy_to": ["completions_actors", "edge_ngram_actors"]},
         "completions_actors": {"type": "completion"},
-        "edge_ngram_actors": {"type": "text", "analyzer": "edge_ngram_analyzer"}
-    }
-  }})
+        "edge_ngram_actors": {"type": "text", "analyzer": "edge_ngram_analyzer"},
+        "saved_query": {"type": "percolator"},
+        "saved_query_user_id": {"type": "keyword"},
+    }}})
+
 
   with open('movies_100k_LLM_generated.json', 'r') as f:
     nline = 0
