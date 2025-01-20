@@ -3,24 +3,33 @@ GET movies/_search
   "query": {
     "bool": {
       "must": [
-        { "match": { "title": "star wars" }},
-        { "range": { "year": { "gte": 1977, "lte": 1983 }}}
+        {"match": {"title": "star wars"}},
+        {"range": {"year": {"gte": 1977, "lte": 1983}}}
       ],
       "must_not": [],
       "should": []
  }}}
 
 
-GET movies/_search
+ GET movies/_search
 {
   "explain": "true",
   "_source": "title",
   "query": {
     "bool": {
       "must": [
-        { "match": { "title": "star wars" }},
-        { "range": { "year": { "gte": 1977, "lte": 1983 }}}
+        {"match": {"title": "star wars"}},
+        {"range": {"year": {"gte": 1977, "lte": 1983}}}
       ]
+ }}}
+
+
+ {
+  "size": 20,
+  "query": {
+    "multi_match": {
+      "query": "%SearchText%",
+      "fields": ["title", "plot"]
 }}}
 
 
@@ -31,12 +40,13 @@ GET movies/_search
   "query": {
     "bool": {
       "must": [
-        { "match": { "title": "star wars" }}
+        {"match": {"title": "star wars"}}
       ],
       "filter": [
-        { "range": { "year": { "gte": 1977, "lte": 1983 }}}
+        {"range": {"year": {"gte": 1977, "lte": 1983}}}
       ]
-  }}}
+}}}
+
 
 GET movies/_search
 {
@@ -64,7 +74,7 @@ GET movies/_search
     "boosting": {
       "positive": {"match": {"title": "star wars"}},
       "negative": {"prefix": {"title": "battle"}},
-      "negative_boost": 0.2
+      "negative_boost": 0.1
 }}}
 
 
@@ -152,16 +162,6 @@ GET movies/_search
 }}}
 
 
-GET movies/_search
-{
-  "profile": true,
-  "size": 0, 
-  "query": {
-    "match": {
-      "title": "star wars"
-}}}
-
-
 PUT /movie_theaters
 {
   "mappings": {
@@ -213,23 +213,60 @@ GET /movie_theaters/_search
         "geo_polygon": {
           "location": {
             "points": [
-              {
-                "lat": 40.36,
-                "lon": -74.41
-              },
-              {
-                "lat": 40.36,
-                "lon": -73.42
-              },
-              {
-                "lat": 40.92,
-                "lon": -73.48
-              },
-              {
-                "lat": 40.90,
-                "lon": -74.44
-              }
+              {"lat": 40.36, "lon": -74.41},
+              {"lat": 40.36, "lon": -73.42},
+              {"lat": 40.92, "lon": -73.48},
+              {"lat": 40.90, "lon": -74.44},
+              {"lat": 40.36, "lon": -74.41}              
 ]}}}}}}
+
+
+GET /movie_theaters/_search
+{
+  "size": 0,
+  "aggs": {
+    "stores_by_location": {
+      "geohash_grid": {
+        "field": "location",
+        "precision": 5
+}}}}
+
+
+GET /movie_theaters/_search
+{
+  "size": 0,
+  "aggs": {
+    "location_bounds": {
+      "geo_bounds": {
+        "field": "location"
+}}}}
+
+
+GET movies/_search
+{
+  "size": 0, 
+  "query": {
+    "match": {
+      "title": "star wars"
+    }
+  },
+  "aggs": {
+    "Genres": {
+      "terms": {
+        "field": "genres.keyword"
+}}}}
+
+
+GET movies/_search
+{
+  "query": {
+    "bool": {
+      "filter": [
+        {"term": {"genres.keyword": "Sci-Fi"}}
+      ],
+      "must": [
+        {"match": {"title": "star wars"}}
+]}}}
 
 
 GET movies/_search
@@ -244,11 +281,17 @@ GET movies/_search
     "genres": {
       "terms": {
         "field": "genres.keyword"
-}}}}
+    },
+    "aggs": {
+      "Actors": {
+        "terms": {
+          "field": "actors.keyword"
+}}}}}}
 
 
 POST movies/_doc/percolate1
 {
+  "saved_query_user_id": "user-95b2a1b4018a",
   "saved_query": {
     "bool": {
       "must": [
@@ -259,6 +302,7 @@ POST movies/_doc/percolate1
 
 POST movies/_doc/percolate2
 {
+  "saved_query_user_id": "user-236a4b21cd93",
   "saved_query": {
     "bool": {
       "must": [{"term":
@@ -274,3 +318,19 @@ GET movies/_search
       "field": "saved_query",
       "document": {"id": 645, "title": "Star Wars: Episode IV - A New Hope","year":"1977","duration":121,"genres":["Action", "Adventure", "Sci-Fi"],"plot":"Young farm boy Luke Skywalker discovers a hidden message from Princess Leia in a droid named R2-D2. With the help of smuggler Han Solo, Chewbacca, and Obi-Wan Kenobi, Luke sets out to rescue Leia from the tyrannical Galactic Empire.","rating":8.6,"like":9842,"revenue":460998507,"thumbnail":"https://m.media-amazon.com/images/M/MV5BYzA0MmMxZjQtYzcwZC00MGM3LThkNjEtYTAyNTBlZjI1NWUzXkEyXkFqcGdeQXVyMzI5ODg0OTE@._V1_UY98_CR15,0,67,98_AL_.jpg","directors":"George Lucas","actors":["Mark Hamill","Harrison Ford","Carrie Fisher"]}
 }}}
+
+
+PUT term_order
+{
+  "mappings": {
+    "properties": {
+      "title": {"type": "text"}
+}}}
+
+
+POST term_order/_doc/1
+{"title": "Star Wars: Episode IV - A New Hope"}
+
+
+POST term_order/_doc/2
+{"title": "Hope for Star Wars: The Prequel Series"}
