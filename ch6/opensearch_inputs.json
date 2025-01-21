@@ -334,3 +334,29 @@ POST term_order/_doc/1
 
 POST term_order/_doc/2
 {"title": "Hope for Star Wars: The Prequel Series"}
+
+
+GET term_order/_search
+{
+  "query": {
+    "match_phrase": {
+      "title": {
+        "query": "star wars hope",
+        "slop": 4
+}}}}
+
+
+GET term_order/_search
+{"query": {
+    "span_near": {
+      "clauses": [
+        {"span_first": {
+            "match": {
+              "span_term": {"title": "star"}},
+            "end": 2
+        }},
+        {"span_term": {"title": {"value": "hope"}}}
+      ],
+      "slop": 12,
+      "in_order": true
+}}}
