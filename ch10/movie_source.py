@@ -1,7 +1,16 @@
+'''
+Provides two generator functions
+  movies: Yields a line at a time from the movies file bulks: Yields n-line bulk
+  post bodies to pass to the OpenSearch bulk helper
+
+The code also provides utility functions to clean, normalize, and enrich the
+source movie data. It creates a source chunk for embedding from each movie
+composed of the title, plot, and genres.
+'''
 import json
-import logging
 
 
+# Treatment of numbers. 
 def safe_int(val):
   if not val:
     return 0
@@ -24,11 +33,16 @@ def safe_float(val):
     return 0.0
 
 
+# For treatment of string lists, removes commas (via split()), leading and
+# trailing whitespace from the tokens.
 def split_and_strip_whitespace(str):
   lis = str.split(',')
   return [x.strip() for x in lis]
 
 
+# Takes a raw JSON line from the input file, and processes numeric and array
+# data to normalize. Creates an embedding_source field composed of title, plot,
+# and genres
 def clean_data(data):
   data['id'] = safe_int(data['id'])
   data['year'] = safe_int(data['year'])
@@ -48,6 +62,7 @@ def clean_data(data):
   return data
 
 
+# Generator the produces one normalized movie as a json dict at a time
 def movies():
   with open('movies_100k_LLM_generated.json', 'r') as f:
     for line in f:
@@ -57,6 +72,8 @@ def movies():
       yield data
 
 
+# Generator that produces one bulk body. Use n-movies to tune for the bulk
+# timeout
 def bulks(n_movies, index_name):
   buffer = []
   for movie in movies():

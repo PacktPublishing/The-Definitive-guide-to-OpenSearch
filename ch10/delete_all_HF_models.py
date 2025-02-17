@@ -1,4 +1,10 @@
-from opensearchpy import OpenSearch
+'''
+Use with caution!
+
+This script deletes all models in OpenSearch that match the name of one of the
+hugging face models from model_utils.py. This can be useful if you've deployed
+many models and run out of RAM
+'''
 from os_client_factory import OSClientFactory
 import logging
 import model_utils
