@@ -4,11 +4,8 @@ and create an opensearch-py client.
 '''
 
 
-import os
-
-
 from opensearchpy import OpenSearch
-from opensearchpy.helpers import bulk
+import os
 
 
 # Be sure to set OPENSEARCH_ADMIN_PASSWORD in the environment!
@@ -48,6 +45,3 @@ class OSClientFactory:
 
   def client(self):
     return self.os_client
-
-if __name__=='__main__':
-  os_client = OSClientFactory().client()

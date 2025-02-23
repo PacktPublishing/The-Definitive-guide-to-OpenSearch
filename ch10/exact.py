@@ -1,12 +1,15 @@
 '''
 Sets up for and runs exact k-nearest neighbor search. Usage
 
-python exact.py [--skip-indexing]
+python exact.py [--skip-indexing] [--filtered]
 
 Once you have created the exact_movies index, you can use the --skip-indexing
-flag to avoid the lengthy load time. 
+flag to avoid the lengthy load time.
+
+Use the --filtered flag to run the filtered_script_score query
 '''
 import argparse
+from auto_incrementing_counter import AutoIncrementingCounter
 from copy import deepcopy
 import jsonpath_ng.ext
 import index_utils
@@ -34,11 +37,16 @@ OPENSEARCH_AUTH = (os.environ.get('OPENSEARCH_ADMIN_USER', 'admin'),
 INDEX_NAME = 'exact_movies'
 PIPELINE_NAME = 'exact_pipeline'
 
+# Set the bulk size. If your indexing requests are timing out, make this
+# smaller.
+BULK_SIZE = 1000
+NUMBER_OF_MOVIES = 100000
+TOTAL_NUMBER_OF_BULKS = NUMBER_OF_MOVIES // BULK_SIZE
 
 # You can try out other models to see how they behave for the movies data set.
 # This script doesn't use remote models, but see model_utils.py for a list of
 # models you can try.
-MODEL_SHORT_NAME = "msmarco-distilbert-base-tas-b"
+MODEL_SHORT_NAME = "all-MiniLM-L12-v2"
 MODEL_REGISTER_BODY = {
   "name": model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['name'],
   "model_format": "TORCH_SCRIPT",
@@ -76,27 +84,51 @@ ingest_pipeline_definition = {
 }
 
 
-# The exact kNN query. Uses a match_all query along with a Painless script to
+# An exact kNN query. Uses a match_all query along with a Painless script to
 # compute the score.
 script_query = {
- "size": 4,
- "query": {
-   "script_score": {
-     "query": {
-       "match_all": {}
-     },
-     "script": {
-       "source": "knn_score",
-       "lang": "knn",
-       "params": {
-         "field": EMBEDDING_FIELD_NAME,
-         "query_value": [],
-         "space_type": "cosinesimil"
-       }
-     }
-   }
- }
-}
+  "size": 4,
+#   "sort": [{"_score": "asc"}],
+  "query": {
+    "script_score": {
+      "query": {
+        "match_all": {}
+      },
+      "script": {
+        "source": "knn_score",
+        "lang": "knn",
+        "params": {
+          "field": EMBEDDING_FIELD_NAME,
+          "query_value": [],
+          "space_type": "cosinesimil"
+}}}}}
+
+
+# An exact kNN query with a bool filter for SciFi movies. First filters the
+# movies for SciFi and then computes a score based on vector distance.
+filtered_script_query = {
+  "size": 4,
+  "sort": [{"_score": "asc"}],
+  "_source": ["title", "plot", "_score"],
+  "query": {
+    "script_score": {
+      "query": {
+        "bool": {
+          "filter": [
+            { "term": {
+                "genres.keyword": "Sci-Fi"
+            }},
+            { "range": {"rating": {"gte": 6.0}}}]
+        }
+      },
+      "script": {
+        "source": "knn_score",
+        "lang": "knn",
+        "params": {
+          "field": EMBEDDING_FIELD_NAME,
+          "query_value": [],
+          "space_type": "l2"
+}}}}}
 
 
 # Main function. Finds or loads the embedding model, creates the index (unless
@@ -104,7 +136,7 @@ script_query = {
 # query "A sweeping space opera about good and evil centered around a powerful
 # family set in the future" and then runs the exact query and prints the search
 # response.
-def main(skip_indexing=False):
+def main(skip_indexing=False, filtered=False):
   # Info level logging.
   logging.basicConfig(level=logging.INFO)
 
@@ -147,7 +179,9 @@ def main(skip_indexing=False):
 
     # Read and add documents to the index with the opensearch-py bulk helper.
     logging.info(f"{int(time.time())}: Indexing documents")
-    for bulk in movie_source.bulks(1000, INDEX_NAME):
+    counter = AutoIncrementingCounter()
+    for bulk in movie_source.bulks(BULK_SIZE, INDEX_NAME):
+      logging.info(f"{int(time.time())}: Indexing bulk {str(counter)} / {TOTAL_NUMBER_OF_BULKS}")
       opensearchpy.helpers.bulk(os_client, bulk, timeout=600, max_retries=10)
   else:
     logging.info(f"{int(time.time())}: Skipping indexing")
@@ -155,8 +189,14 @@ def main(skip_indexing=False):
   # Run a query. Calls the LLM to generate a vector embedding for the question
   # (see model_utils.py) and then adds that embedding to the OpenSearch query.
   logging.info(f"{int(time.time())}: Running query")
-  query = deepcopy(script_query)
-  question = "A sweeping space opera about good and evil centered around a powerful family set in the future"
+  if filtered:
+    query = deepcopy(filtered_script_query)
+  else:
+    query = deepcopy(script_query)
+  question = "Star Wars"
+  # question = "A space opera with good and evil and fantastical creatures"
+  # question = "A space opera with rebels and empire at war"
+  # question = "A war in the stars in a galaxy far far away"
   query_embedding = model_utils.create_embedding(os_client, model_id, question)
   expr = jsonpath_ng.ext.parser.parse('query.script_score.script.params.query_value')
   query = expr.update(query, query_embedding)
@@ -167,7 +207,9 @@ def main(skip_indexing=False):
   # query.
   logging.info(f"{int(time.time())}: Query response")
   for hit in response['hits']['hits']:
-    logging.info(f"{int(time.time())}: title: {hit['_source']['title']}\nplot: {hit['_source']['plot']}\n")
+    logging.info(f"{int(time.time())}: score: {hit['_score']}")
+    logging.info(f"{int(time.time())}: title: {hit['_source']['title']}")
+    logging.info(f"plot: {hit['_source']['plot']}\n")
 
 
 if __name__ == "__main__":
@@ -176,5 +218,6 @@ if __name__ == "__main__":
       description="Loads movie data, and runs exact kNN queries. Use --skip-indexing"
       " to skip the from-scratch creation of the index.",
   )
-  parser.add_argument("-d", "--skip-indexing", default=False, action="store_true")
-  main(skip_indexing=parser.parse_args().skip_indexing)
+  parser.add_argument("--skip-indexing", default=False, action="store_true")
+  parser.add_argument("--filtered", default=False, action="store_true")
+  main(skip_indexing=parser.parse_args().skip_indexing, filtered=parser.parse_args().filtered)

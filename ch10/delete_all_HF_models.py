@@ -20,5 +20,7 @@ for name in model_utils.HUGGING_FACE_MODELS.keys():
   if model_id:
     logging.info(f'Deleting model {name}: {model_id}')
     os_client.transport.perform_request('POST', f'/_plugins/_ml/models/{model_id}/_undeploy')
+    # This sleep prevents overwhelming the cluster with too many tasks and
+    # responding with HTTP status 429
     time.sleep(1)
     os_client.transport.perform_request('DELETE', f'/_plugins/_ml/models/{model_id}')

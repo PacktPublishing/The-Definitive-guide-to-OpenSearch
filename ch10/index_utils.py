@@ -19,7 +19,8 @@ import time
 BASE_SETTINGS = {
     "settings": {
       "number_of_shards": 1,
-      "number_of_replicas": 1
+      "number_of_replicas": 1,
+      "knn": True
     },
     "mappings": {
       "properties": {

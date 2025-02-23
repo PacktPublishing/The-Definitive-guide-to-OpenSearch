@@ -166,27 +166,3 @@ def create_embedding(os_client, model_id, input_text):
     }
   )
   return response['inference_results'][0]['output'][0]['data']
-
-
-if __name__=='__main__':
-  from os_client_factory import OSClientFactory
-  logging.basicConfig(level=logging.INFO)
-  os_client = OSClientFactory().client()
-
-  for name in HUGGING_FACE_MODELS.keys():
-    full_name = HUGGING_FACE_MODELS[name]['name']
-    logging.info(model_id_for(os_client=os_client, model_name=full_name))
-
-  #  body={
-  #   "name": HUGGING_FACE_MODELS["all-distilroberta-v1"]['name'],
-  #   "version": HUGGING_FACE_MODELS["all-distilroberta-v1"]['version'],
-  #   "description": "all-distilroberta-v1",
-  #   "model_format": "TORCH_SCRIPT",
-  # }
-  # logging.info(f'Body {body}')
-  # name = 'all-distilroberta-v1'
-  # model_id = find_or_deploy_model(
-  #   os_client=os_client,
-  #   model_name=HUGGING_FACE_MODELS[name]['name'],
-  #   body=body
-  # )
