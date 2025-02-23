@@ -76,8 +76,8 @@ def clean_data(data):
   # Construct a source field for embeddings with information from the title, plot
   # and genres. Truncate at 500 tokens
   embedding_source = f'movie title: {data["title"]} '
-  # embedding_source += f'movie plot: {data["plot"]} '
   embedding_source += f'movie genres: {' '.join(data["genres"])}'
+  embedding_source += f'movie plot: {data["plot"]} '
   data['embedding_source'] = " ".join(embedding_source.split()[:500])
   return data
 

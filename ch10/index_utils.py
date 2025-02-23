@@ -73,7 +73,7 @@ BASE_SETTINGS = {
 def delete_then_create_index(os_client, index_name, pipeline_name, additional_fields):
   # Delete the existing index
   if os_client.indices.exists(index_name):
-    logging.info(f'{int(time.time())}: Deleting existing index {index_name}')
+    logging.info(f'Deleting existing index {index_name}')
     os_client.indices.delete(index_name)
 
   # Construct settings
@@ -82,5 +82,5 @@ def delete_then_create_index(os_client, index_name, pipeline_name, additional_fi
   settings['mappings']['properties'].update(additional_fields)
 
   # Create the new index
-  logging.info(f'{int(time.time())}: Creating index {index_name}')
+  logging.info(f'Creating index {index_name}')
   os_client.indices.create(index_name, body=settings)

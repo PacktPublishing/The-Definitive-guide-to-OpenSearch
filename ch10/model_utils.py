@@ -79,14 +79,14 @@ HUGGING_FACE_MODELS = {
 # Returns the http response for the final call to the tasks API.
 def _monitor_task(os_client: OpenSearch, task_id):
   response = os_client.transport.perform_request('GET', f'/_plugins/_ml/tasks/{task_id}')
-  logging.info(f"{int(time.time())}: Task status: {response['state']}")
+  logging.info(f"Task status: {response['state']}")
   state = response['state']
   while state != 'COMPLETED':
     if state == 'FAILED' or state == 'COMPLETED_WITH_ERROR':
-      raise Exception(f"{int(time.time())}: Task failed: {response}")
+      raise Exception(f"Task failed: {response}")
     response = os_client.transport.perform_request('GET', f'/_plugins/_ml/tasks/{task_id}')
     state = response['state']
-    logging.info(f"{int(time.time())}: Task status: {state}")
+    logging.info(f"Task status: {state}")
     # This needs a delay, or it will overwhelm OpenSearch with these
     # calls and eventually OpenSearch will return a HTTP 429 status. 
     time.sleep(1)

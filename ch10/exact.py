@@ -160,7 +160,10 @@ filtered_script_query = {
 # response.
 def main(skip_indexing=False, filtered=False):
   # Info level logging.
-  logging.basicConfig(level=logging.INFO)
+  logging.basicConfig(
+    format='%(asctime)s - %(levelname)s - %(message)s', 
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO)
 
   # See os_client_factory.py for details on the set up for the opensearch-py
   # client.
@@ -169,7 +172,7 @@ def main(skip_indexing=False, filtered=False):
   # Find an existing model, or register the model. Deploy the model to prepare
   # it for use. You need to _deploy the model whenever the cluster shuts down.
   # This can take some time. The code busy waits for the model to be deployed.
-  logging.info(f"{int(time.time())}: Finding or deploying model {MODEL_SHORT_NAME}")
+  logging.info(f"Finding or deploying model {MODEL_SHORT_NAME}")
   model_id = model_utils.find_or_deploy_model(
     os_client=os_client,
     model_name=model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['name'],
@@ -182,7 +185,7 @@ def main(skip_indexing=False, filtered=False):
   #
   # NOTE: Indexing takes an hour or more, depending on where you have deployed
   # the model
-  logging.info(f"{int(time.time())}: Creating index {INDEX_NAME}")
+  logging.info(f"Creating index {INDEX_NAME}")
   if not skip_indexing:
 
     # Create an ingest pipeline
@@ -191,7 +194,7 @@ def main(skip_indexing=False, filtered=False):
     os_client.ingest.put_pipeline(id=PIPELINE_NAME, body=pipeline_definition)
 
     # Create an index with the pipeline
-    logging.info(f"{int(time.time())}: Creating index {INDEX_NAME}")
+    logging.info(f"Creating index {INDEX_NAME}")
     index_utils.delete_then_create_index(
       os_client=os_client,
       index_name=INDEX_NAME,
@@ -200,25 +203,22 @@ def main(skip_indexing=False, filtered=False):
     )
 
     # Read and add documents to the index with the opensearch-py bulk helper.
-    logging.info(f"{int(time.time())}: Indexing documents")
+    logging.info(f"Indexing documents")
     counter = AutoIncrementingCounter()
     for bulk in movie_source.bulks(BULK_SIZE, INDEX_NAME):
-      logging.info(f"{int(time.time())}: Indexing bulk {str(counter)} / {TOTAL_NUMBER_OF_BULKS}")
+      logging.info(f"Indexing bulk {str(counter)} / {TOTAL_NUMBER_OF_BULKS}")
       opensearchpy.helpers.bulk(os_client, bulk, timeout=600, max_retries=10)
   else:
-    logging.info(f"{int(time.time())}: Skipping indexing")
+    logging.info(f"Skipping indexing")
 
   # Run a query. Calls the LLM to generate a vector embedding for the question
   # (see model_utils.py) and then adds that embedding to the OpenSearch query.
-  logging.info(f"{int(time.time())}: Running query")
+  logging.info(f"Running query")
   if filtered:
     query = deepcopy(filtered_script_query)
   else:
     query = deepcopy(script_query)
-  # question = "A space opera with good and evil and fantastical creatures"
-  # question = "A space opera with rebels and empire at war"
-  # question = "A war in the stars in a galaxy far far away"
-  question = "Star Wars"
+  question = "Sci-fi about the force and jedis"
   query_embedding = model_utils.create_embedding(os_client, model_id, question)
   expr = jsonpath_ng.ext.parser.parse('query.script_score.script.params.query_value')
   query = expr.update(query, query_embedding)
@@ -227,10 +227,10 @@ def main(skip_indexing=False, filtered=False):
   # Print the search response. The response contains the top 4 hits (the query
   # specifies "size": 4), which are the movies that are most similar to the
   # query.
-  logging.info(f"{int(time.time())}: Query response")
+  logging.info(f"Query response")
   for hit in response['hits']['hits']:
-    logging.info(f"{int(time.time())}: score: {hit['_score']}")
-    logging.info(f"{int(time.time())}: title: {hit['_source']['title']}")
+    logging.info(f"score: {hit['_score']}")
+    logging.info(f"title: {hit['_source']['title']}")
     logging.info(f"plot: {hit['_source']['plot']}\n")
 
 
