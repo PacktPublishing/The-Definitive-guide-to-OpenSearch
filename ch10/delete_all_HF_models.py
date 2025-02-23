@@ -1,10 +1,32 @@
-'''
-Use with caution!
+"""
+Model Cleanup Utility
 
-This script deletes all models in OpenSearch that match the name of one of the
-hugging face models from model_utils.py. This can be useful if you've deployed
-many models and run out of RAM
-'''
+This script provides functionality to clean up deployed Hugging Face models from OpenSearch.
+It iterates through the models defined in model_utils.py and removes their deployments
+to free up RAM and resources.
+
+The script will:
+1. Connect to OpenSearch using the client factory
+2. Find all deployed models matching Hugging Face model names
+3. Undeploy each model
+4. Delete the model definition
+5. Add delays between operations to prevent overwhelming the cluster
+
+Usage:
+    Run this script directly to remove all deployed Hugging Face models.
+    
+Warning:
+    Use with caution! This will permanently delete model deployments.
+    Make sure you want to remove all models before running.
+
+Dependencies:
+    - os_client_factory
+    - model_utils
+    - logging
+    - time
+"""
+
+
 from os_client_factory import OSClientFactory
 import logging
 import model_utils
@@ -12,6 +34,7 @@ import time
 
 
 logging.basicConfig(level=logging.INFO)
+
 os_client = OSClientFactory().client()
 for name in model_utils.HUGGING_FACE_MODELS.keys():
   model_full_name = model_utils.HUGGING_FACE_MODELS[name]['name']

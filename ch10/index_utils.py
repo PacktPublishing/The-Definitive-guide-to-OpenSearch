@@ -1,10 +1,32 @@
 '''
+Module for managing OpenSearch index creation and configuration for exact kNN
+search.
+
 Provides settings and a method to delete then create an index. The method takes
 additional field definitions, allowing the scripts that use it to specify the
 embedding field. Index create is also where the index is joined to the pipeline
 with the default_pipeline index setting.
 
-CAUTION! If the index exists, delete_then_create_index will delete it!
+The base mapping includes fields for movie metadata like: - Basic info (id,
+title, year, duration) - Content info (plot, genres) - Performance metrics
+(rating, vote, revenue) - People (directors, actors) - Media (thumbnail)
+
+The module is designed to work with kNN search functionality and pipeline
+processors.
+
+Functions:
+    delete_then_create_index(os_client, index_name, pipeline_name,
+    additional_fields):
+        Deletes an existing index if present and creates a new one with the
+        specified configuration
+
+Constants:
+    BASE_SETTINGS: Dictionary containing the base mapping configuration for
+    movie data
+
+Warning!
+    The delete_then_create_index function will delete any existing index with
+    the same name before creating the new one. Use with caution!
 '''
 
 

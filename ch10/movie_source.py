@@ -1,13 +1,33 @@
-'''
-Provides two generator functions
-  movies: Yields a line at a time from the movies file bulks: Yields n-line bulk
-  post bodies to pass to the OpenSearch bulk helper
+"""
+Movie Data Processing Module
 
-The code also provides utility functions to clean, normalize, and enrich the
-source movie data. It creates a source chunk for embedding from each movie
-composed of the title, plot, and genres.
-'''
+This module provides functionality for processing and normalizing movie data
+from a JSON file, preparing it for bulk indexing into OpenSearch.
+
+Key Components: - Data cleaning and normalization for movie records - Safe type
+conversion for numeric fields - String list processing for fields like genres,
+actors, directors - Creation of an embedding source field from movie metadata -
+Generator functions for streaming movie data processing
+
+Generator Functions:
+    movies(): Yields normalized movie records one at a time bulks(n_movies,
+    index_name): Yields batches of n movies formatted for bulk indexing
+
+Utility Functions:
+    safe_int(val): Safely converts values to integers safe_float(val): Safely
+    converts values to floats split_and_strip_whitespace(str): Processes
+    comma-separated strings into clean lists clean_data(data): Normalizes and
+    enriches raw movie data
+
+The module expects input from a 'movies_100k_LLM_generated.json' file with one
+JSON movie record per line.
+"""
+
+
 import json
+
+
+MOVIES_FILE_PATH = 'movies_100k_LLM_generated.json'
 
 
 # Treatment of numbers. 
@@ -56,7 +76,7 @@ def clean_data(data):
   # Construct a source field for embeddings with information from the title, plot
   # and genres. Truncate at 500 tokens
   embedding_source = f'movie title: {data["title"]} '
-  embedding_source += f'movie plot: {data["plot"]} '
+  # embedding_source += f'movie plot: {data["plot"]} '
   embedding_source += f'movie genres: {' '.join(data["genres"])}'
   data['embedding_source'] = " ".join(embedding_source.split()[:500])
   return data
@@ -64,7 +84,7 @@ def clean_data(data):
 
 # Generator the produces one normalized movie as a json dict at a time
 def movies():
-  with open('movies_100k_LLM_generated.json', 'r') as f:
+  with open(MOVIES_FILE_PATH, 'r') as f:
     for line in f:
       if not line:
         break

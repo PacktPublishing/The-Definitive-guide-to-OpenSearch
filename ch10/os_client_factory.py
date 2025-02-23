@@ -1,6 +1,25 @@
 '''
-Packages the code to take credentials from the environment,
-and create an opensearch-py client. 
+OpenSearch Client Factory Module
+
+This module provides functionality to create and configure an OpenSearch client
+using environment variables for authentication and connection settings.
+
+Environment Variables:
+    OPENSEARCH_HOST: Host address for OpenSearch (default: 'localhost')
+    OPENSEARCH_PORT: Port number for OpenSearch (default: 9200) 
+    OPENSEARCH_ADMIN_USER: Admin username for authentication (default: 'admin')
+    OPENSEARCH_ADMIN_PASSWORD: Admin password for authentication (required)
+
+The module creates a configured OpenSearch client with SSL enabled and 
+sets up cluster settings for ML features including:
+- Memory features
+- RAG pipeline features 
+- Model registration via URL
+- ML node execution
+- Trusted connector endpoints for AWS Bedrock
+
+Classes:
+    OSClientFactory: Factory class that creates and configures the OpenSearch client
 '''
 
 
@@ -16,6 +35,23 @@ OPENSEARCH_AUTH = (os.environ.get('OPENSEARCH_ADMIN_USER', 'admin'),
 
 
 class OSClientFactory:
+  """
+  Factory class for creating and configuring OpenSearch clients.
+  
+  This class handles creation of an OpenSearch client with proper authentication
+  and SSL settings. It also configures required cluster settings for ML features
+  including memory, RAG pipeline, model registration, ML node execution and
+  trusted connector endpoints for AWS Bedrock.
+
+  Attributes:
+      os_client: Configured OpenSearch client instance
+
+  Raises:
+      ValueError: If OPENSEARCH_ADMIN_PASSWORD environment variable is not set
+
+  Example:
+      client = OSClientFactory().client()
+  """
 
   def __init__(self):
     # Validate that there's a password in the environment

@@ -1,13 +1,35 @@
-'''
-Sets up for and runs exact k-nearest neighbor search. Usage
+"""
+Exact k-nearest neighbor search implementation for movie recommendations.
 
-python exact.py [--skip-indexing] [--filtered]
+This module provides functionality to:
+1. Set up and run exact k-nearest neighbor (kNN) search on a movie dataset
+2. Create and manage an OpenSearch index with vector embeddings
+3. Run similarity searches using script scoring and optional filters
 
-Once you have created the exact_movies index, you can use the --skip-indexing
-flag to avoid the lengthy load time.
+Key features:
+- Creates vector embeddings using Hugging Face models
+- Indexes movie data with automatic embedding generation
+- Supports exact kNN search with cosine similarity
+- Allows filtered searches (e.g. by genre and rating)
 
-Use the --filtered flag to run the filtered_script_score query
-'''
+Usage:
+    python exact.py [--skip-indexing] [--filtered]
+
+Arguments:
+    --skip-indexing: Skip index creation if it already exists
+    --filtered: Run query with genre and rating filters
+
+Environment Variables:
+    OPENSEARCH_HOST: OpenSearch host (default: localhost)
+    OPENSEARCH_PORT: OpenSearch port (default: 9200) 
+    OPENSEARCH_ADMIN_USER: OpenSearch username (default: admin)
+    OPENSEARCH_ADMIN_PASSWORD: OpenSearch password
+
+The script requires an OpenSearch cluster with the neural-search plugin installed.
+For Amazon OpenSearch Service deployments, set port to 443.
+"""
+
+
 import argparse
 from auto_incrementing_counter import AutoIncrementingCounter
 from copy import deepcopy
@@ -193,10 +215,10 @@ def main(skip_indexing=False, filtered=False):
     query = deepcopy(filtered_script_query)
   else:
     query = deepcopy(script_query)
-  question = "Star Wars"
   # question = "A space opera with good and evil and fantastical creatures"
   # question = "A space opera with rebels and empire at war"
   # question = "A war in the stars in a galaxy far far away"
+  question = "Star Wars"
   query_embedding = model_utils.create_embedding(os_client, model_id, question)
   expr = jsonpath_ng.ext.parser.parse('query.script_score.script.params.query_value')
   query = expr.update(query, query_embedding)
