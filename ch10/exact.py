@@ -43,6 +43,12 @@ from os_client_factory import OSClientFactory
 import opensearchpy.helpers
 
 
+# NOTE: Much of the code is duplicated across the various examples. Better
+# coding practice is to build modules/classes to encapsulate the duplicated code.
+# We've constructed the examples this way to facilitate expositon in the book
+# and for the examples to be self-contained
+
+
 # Be sure to set these environment variables, especially the
 # OPENSEARCH_ADMIN_PASSWORD. If you are using Amazon OpenSearch Service, the
 # port should be 443. 
@@ -184,7 +190,6 @@ def main(skip_indexing=False, filtered=False):
   #
   # NOTE: Indexing takes an hour or more, depending on where you have deployed
   # the model
-  logging.info(f"Creating index {INDEX_NAME}")
   if not skip_indexing:
 
     # Create an ingest pipeline
