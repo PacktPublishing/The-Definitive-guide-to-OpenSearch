@@ -79,7 +79,8 @@ def delete_then_create_index(os_client, index_name, pipeline_name, additional_fi
   # Construct settings
   settings = deepcopy(BASE_SETTINGS)
   settings['settings']['default_pipeline'] = pipeline_name
-  settings['mappings']['properties'].update(additional_fields)
+  if additional_fields:
+    settings['mappings']['properties'].update(additional_fields)
 
   # Create the new index
   logging.info(f'Creating index {index_name}')
