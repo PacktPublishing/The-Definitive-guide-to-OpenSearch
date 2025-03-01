@@ -186,7 +186,9 @@ Note:
     - Existing models will be preserved if skip_if_exists=True
 """
 def train(os_client: OpenSearch, model_id, model_dimensions, skip_if_exists=True):
-  
+
+  # If the model already exists, and skip_if_exists is true, then don't create a
+  # new model. Otherwise, delete the existing model.
   logging.info(f'Model state: _get_model_state(os_client)')
   state = _get_model_state(os_client)
   if state and state == 'created':
@@ -238,32 +240,3 @@ def train(os_client: OpenSearch, model_id, model_dimensions, skip_if_exists=True
   logging.info(f"Waiting for training to complete for model {TRAINING_MODEL_NAME}")
   _wait_for_training_completion(os_client, model_id, model_dimensions)
   return TRAINING_MODEL_NAME
-
-
-# if __name__ == "__main__":
-#   import os_client_factory
-#   logging.basicConfig(
-#     format='%(asctime)s - %(levelname)s - %(message)s', 
-#     datefmt='%Y-%m-%d %H:%M:%S',
-#     level=logging.INFO)
-#   c = os_client_factory.OSClientFactory().client()
-#   # Find an existing model, or register the model. Deploy the model to prepare
-#   # it for use. You need to _deploy the model whenever the cluster shuts down.
-#   # This can take some time. The code busy waits for the model to be deployed.
-#   MODEL_SHORT_NAME = "all-MiniLM-L12-v2"
-#   MODEL_REGISTER_BODY = {
-#     "name": model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['name'],
-#     "model_format": "TORCH_SCRIPT",
-#     "version": model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['version']
-#   }
-#   logging.info(f"Finding or deploying model {MODEL_SHORT_NAME}")
-#   model_id = model_utils.find_or_deploy_model(
-#     os_client=c,
-#     model_name=model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['name'],
-#     body=MODEL_REGISTER_BODY
-#   )
-#   logging.info(f"Model ID: {model_id}")
-#   train(c, 
-#         model_id=model_id,
-#         model_dimensions=model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['dimensions'],
-#         skip_if_exists=False)
