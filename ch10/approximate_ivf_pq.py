@@ -3,7 +3,7 @@ from auto_incrementing_counter import AutoIncrementingCounter
 from copy import deepcopy
 import jsonpath_ng.ext
 import index_utils
-import ivf_training
+import ivf_pq_training
 import logging
 import model_utils
 import movie_source
@@ -20,9 +20,8 @@ import opensearchpy.helpers
 # Defines the search index and pipelines created by the script. If you change these
 # here, you'll need to change the other example scripts to use the correct index
 # and pipeline!
-INDEX_NAME = 'approximate_movies_ivf'
-PIPELINE_NAME = 'approximate_pipeline_ivf'
-
+INDEX_NAME = 'approximate_movies_ivf_pq'
+PIPELINE_NAME = 'approximate_pipeline_ivf_pq'
 
 # Set the bulk size. If your indexing requests are timing out, make this
 # smaller.
@@ -113,7 +112,7 @@ def main(skip_indexing=False, filtered=False):
   if not skip_indexing:
 
     # Create an IVF model
-    training_model = ivf_training.train(
+    training_model = ivf_pq_training.train(
       os_client=os_client,
       model_id=model_id,
       model_dimensions=model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['dimensions'],

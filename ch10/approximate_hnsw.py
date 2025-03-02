@@ -6,7 +6,6 @@ import index_utils
 import logging
 import model_utils
 import movie_source
-import os
 from os_client_factory import OSClientFactory
 import opensearchpy.helpers
 
@@ -17,20 +16,11 @@ import opensearchpy.helpers
 # and for the examples to be self-contained
 
 
-# Be sure to set these environment variables, especially the
-# OPENSEARCH_ADMIN_PASSWORD. If you are using Amazon OpenSearch Service, the
-# port should be 443. 
-OPENSEARCH_HOST = os.environ.get('OPENSEARCH_HOST', 'localhost')
-OPENSEARCH_PORT = os.environ.get('OPENSEARCH_PORT', 9200)
-OPENSEARCH_AUTH = (os.environ.get('OPENSEARCH_ADMIN_USER', 'admin'),
-                   os.environ.get('OPENSEARCH_ADMIN_PASSWORD', ''))
-
-
 # Defines the index and pipelines created by the script. If you change these
 # here, you'll need to change the other example scripts to use the correct index
 # and pipeline!
-INDEX_NAME = 'approximate_movies'
-PIPELINE_NAME = 'approximate_pipeline'
+INDEX_NAME = 'approximate_movies_hnsw'
+PIPELINE_NAME = 'approximate_pipeline_hnsw'
 
 # Set the bulk size. If your indexing requests are timing out, make this
 # smaller.
@@ -195,6 +185,7 @@ def main(skip_indexing=False, filtered=False):
     logging.info(f"score: {hit['_score']}")
     logging.info(f"title: {hit['_source']['title']}")
     logging.info(f"plot: {hit['_source']['plot']}\n")
+    logging.info(f"embedding source: {hit['_source'][EMBEDDING_SOURCE_FIELD_NAME]}")
 
 
 if __name__ == "__main__":

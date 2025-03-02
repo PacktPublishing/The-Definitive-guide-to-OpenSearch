@@ -1,42 +1,3 @@
-"""
-IVF (Inverted File Index) training module for OpenSearch vector search.
-
-This module handles the training process for IVF-based approximate k-NN search
-in OpenSearch. It manages the creation of training data, index setup, and model
-training for vector similarity search.
-
-Key Components:
-    - Training index creation with appropriate mappings
-    - Ingest pipeline setup for text embedding
-    - IVF model training configuration and execution
-    - Model state monitoring
-
-Constants:
-    DOCS_PER_BULK (int): Number of documents to process in each bulk operation
-    TOTAL_NUMBER_OF_BULKS (int): Total number of bulk operations to perform
-    TRAINING_INDEX_NAME (str): Name of the index used for training
-    TRAINING_MODEL_NAME (str): Name of the IVF model to be trained
-    TRAINING_SOURCE_FIELD_NAME (str): Source field for text embedding
-    TRAINING_DEST_FIELD_NAME (str): Destination field for embedded vectors
-    TRAINING_PIPELINE_NAME (str): Name of the ingest pipeline
-
-Functions:
-    train: Main function to execute the IVF training process
-    _get_model_state: Helper function to check training model state
-    _wait_for_training_completion: Helper function to monitor training progress
-
-Dependencies:
-    - opensearchpy
-    - index_utils
-    - model_utils
-    - movie_source
-
-Note:
-    The training process requires a text embedding model to be deployed in
-    OpenSearch before execution.
-"""
-
-
 from copy import deepcopy
 import index_utils
 import logging
@@ -47,18 +8,18 @@ import time
 
 
 # We recommend 10% of the total documents for training.
-DOCS_PER_BULK = 1000
 TOTAL_NUMBER_OF_BULKS = 10
+DOCS_PER_BULK = 1000
 
 
 # Defines the training index name. The script loads raw vector data into this
-# index and calls the train API to prepare for creating the IVF index
-TRAINING_INDEX_NAME = 'ivf_training'
-TRAINING_MODEL_NAME = 'ivf_model'
+# index and calls the train API to prepare for creating the IVF PQ index
+TRAINING_INDEX_NAME = 'ivf_pq_training'
+TRAINING_MODEL_NAME = 'ivf_pq_model'
 TRAINING_SOURCE_FIELD_NAME = 'embedding_source'
 TRAINING_DEST_FIELD_NAME = 'embedding'
-TRAINING_PIPELINE_NAME = 'ivf_pipeline'
-from approximate_ivf import INDEX_NAME as DESTINATION_INDEX_NAME
+TRAINING_PIPELINE_NAME = 'ivf_pq_pipeline'
+from approximate_ivf_pq import INDEX_NAME as DESTINATION_INDEX_NAME
 
 
 # Defines the index mapping for training data with basic movie metadata fields.
@@ -119,15 +80,18 @@ training_ingest_pipeline_definition = {
 TRAINING_REQUEST_BODY = {
   "training_index": TRAINING_INDEX_NAME,
   "training_field": TRAINING_DEST_FIELD_NAME,
-  "description": "Training model for IVF",
+  "description": "Training model for IVF PQ",
   "space_type": "l2",
   "method": {
     "name": "ivf",
     "engine": "faiss",
     "parameters": {
-      "nlist": 4,
-      "nprobes": 2
-}}}
+      "encoder": {
+        "name": "pq",
+        "parameters": {
+          "m": 8,
+          "code_size": 8
+}}}}}
 
 
 # Retrieves the current state of the IVF training model from OpenSearch.

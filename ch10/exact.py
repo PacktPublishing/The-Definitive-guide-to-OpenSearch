@@ -38,7 +38,6 @@ import index_utils
 import logging
 import model_utils
 import movie_source
-import os
 from os_client_factory import OSClientFactory
 import opensearchpy.helpers
 
@@ -47,15 +46,6 @@ import opensearchpy.helpers
 # coding practice is to build modules/classes to encapsulate the duplicated code.
 # We've constructed the examples this way to facilitate expositon in the book
 # and for the examples to be self-contained
-
-
-# Be sure to set these environment variables, especially the
-# OPENSEARCH_ADMIN_PASSWORD. If you are using Amazon OpenSearch Service, the
-# port should be 443. 
-OPENSEARCH_HOST = os.environ.get('OPENSEARCH_HOST', 'localhost')
-OPENSEARCH_PORT = os.environ.get('OPENSEARCH_PORT', 9200)
-OPENSEARCH_AUTH = (os.environ.get('OPENSEARCH_ADMIN_USER', 'admin'),
-                   os.environ.get('OPENSEARCH_ADMIN_PASSWORD', ''))
 
 
 # Defines the index and pipelines created by the script. If you change these
@@ -115,7 +105,6 @@ ingest_pipeline_definition = {
 # compute the score.
 script_query = {
   "size": 4,
-#   "sort": [{"_score": "asc"}],
   "query": {
     "script_score": {
       "query": {
@@ -235,7 +224,8 @@ def main(skip_indexing=False, filtered=False):
   for hit in response['hits']['hits']:
     logging.info(f"score: {hit['_score']}")
     logging.info(f"title: {hit['_source']['title']}")
-    logging.info(f"plot: {hit['_source']['plot']}\n")
+    logging.info(f"plot: {hit['_source']['plot']}")
+    logging.info(f"embedding source: {hit['_source'][EMBEDDING_SOURCE_FIELD_NAME]}\n")
 
 
 if __name__ == "__main__":
