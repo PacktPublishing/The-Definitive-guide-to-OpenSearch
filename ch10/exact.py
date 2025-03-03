@@ -6,24 +6,12 @@ This module provides functionality to:
 2. Create and manage an OpenSearch index with vector embeddings
 3. Run similarity searches using script scoring and optional filters
 
-Key features:
-- Creates vector embeddings using Hugging Face models
-- Indexes movie data with automatic embedding generation
-- Supports exact kNN search with cosine similarity
-- Allows filtered searches (e.g. by genre and rating)
-
 Usage:
     python exact.py [--skip-indexing] [--filtered]
 
 Arguments:
     --skip-indexing: Skip index creation if it already exists
     --filtered: Run query with genre and rating filters
-
-Environment Variables:
-    OPENSEARCH_HOST: OpenSearch host (default: localhost)
-    OPENSEARCH_PORT: OpenSearch port (default: 9200) 
-    OPENSEARCH_ADMIN_USER: OpenSearch username (default: admin)
-    OPENSEARCH_ADMIN_PASSWORD: OpenSearch password
 
 The script requires an OpenSearch cluster with the neural-search plugin installed.
 For Amazon OpenSearch Service deployments, set port to 443.
@@ -48,16 +36,14 @@ import opensearchpy.helpers
 # and for the examples to be self-contained
 
 
-# Defines the index and pipelines created by the script. If you change these
-# here, you'll need to change the other example scripts to use the correct index
-# and pipeline!
+# Defines the index and pipelines created by the script.
 INDEX_NAME = 'exact_movies'
 PIPELINE_NAME = 'exact_pipeline'
 
 # Set the bulk size. If your indexing requests are timing out, make this
 # smaller.
 BULK_SIZE = 1000
-NUMBER_OF_MOVIES = 100000
+NUMBER_OF_MOVIES = movie_source.TOTAL_MOVIES
 TOTAL_NUMBER_OF_BULKS = NUMBER_OF_MOVIES // BULK_SIZE
 
 # You can try out other models to see how they behave for the movies data set.
@@ -65,9 +51,9 @@ TOTAL_NUMBER_OF_BULKS = NUMBER_OF_MOVIES // BULK_SIZE
 # models you can try.
 MODEL_SHORT_NAME = "all-MiniLM-L12-v2"
 MODEL_REGISTER_BODY = {
-  "name": model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['name'],
+  "name": model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['name'],
   "model_format": "TORCH_SCRIPT",
-  "version": model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['version']
+  "version": model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['version']
 }
 
 
@@ -78,7 +64,7 @@ EMBEDDING_FIELD_NAME = 'embedding'
 KNN_FIELDS = {
   "embedding": {
     "type": "knn_vector",
-    "dimension": model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['dimensions']
+    "dimension": model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['dimensions']
   }
 }
 
@@ -104,7 +90,6 @@ ingest_pipeline_definition = {
 # An exact kNN query. Uses a match_all query along with a Painless script to
 # compute the score.
 script_query = {
-  "size": 4,
   "query": {
     "script_score": {
       "query": {
@@ -123,9 +108,7 @@ script_query = {
 # An exact kNN query with a bool filter for SciFi movies. First filters the
 # movies for SciFi and then computes a score based on vector distance.
 filtered_script_query = {
-  "size": 4,
   "sort": [{"_score": "asc"}],
-  "_source": ["title", "plot", "_score"],
   "query": {
     "script_score": {
       "query": {
@@ -169,7 +152,7 @@ def main(skip_indexing=False, filtered=False):
   logging.info(f"Finding or deploying model {MODEL_SHORT_NAME}")
   model_id = model_utils.find_or_deploy_model(
     os_client=os_client,
-    model_name=model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['name'],
+    model_name=model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['name'],
     body=MODEL_REGISTER_BODY
   )
 
