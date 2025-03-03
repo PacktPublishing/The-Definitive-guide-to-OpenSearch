@@ -32,7 +32,6 @@ MOVIES_TO_TRAIN = int(movie_source.TOTAL_MOVIES * .10)
 DOCS_PER_BULK = MOVIES_TO_TRAIN // 10
 TOTAL_NUMBER_OF_BULKS = int(MOVIES_TO_TRAIN / DOCS_PER_BULK)
 
-
 # Defines the training index name. The script loads raw vector data into this
 # index and calls the train API to prepare for creating the IVF index
 TRAINING_INDEX_NAME = 'ivf_training'
