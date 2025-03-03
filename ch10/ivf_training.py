@@ -11,29 +11,10 @@ Key Components:
     - IVF model training configuration and execution
     - Model state monitoring
 
-Constants:
-    DOCS_PER_BULK (int): Number of documents to process in each bulk operation
-    TOTAL_NUMBER_OF_BULKS (int): Total number of bulk operations to perform
-    TRAINING_INDEX_NAME (str): Name of the index used for training
-    TRAINING_MODEL_NAME (str): Name of the IVF model to be trained
-    TRAINING_SOURCE_FIELD_NAME (str): Source field for text embedding
-    TRAINING_DEST_FIELD_NAME (str): Destination field for embedded vectors
-    TRAINING_PIPELINE_NAME (str): Name of the ingest pipeline
-
 Functions:
     train: Main function to execute the IVF training process
     _get_model_state: Helper function to check training model state
     _wait_for_training_completion: Helper function to monitor training progress
-
-Dependencies:
-    - opensearchpy
-    - index_utils
-    - model_utils
-    - movie_source
-
-Note:
-    The training process requires a text embedding model to be deployed in
-    OpenSearch before execution.
 """
 
 
@@ -47,8 +28,9 @@ import time
 
 
 # We recommend 10% of the total documents for training.
-DOCS_PER_BULK = 1000
-TOTAL_NUMBER_OF_BULKS = 10
+MOVIES_TO_TRAIN = int(movie_source.TOTAL_MOVIES * .10)
+DOCS_PER_BULK = MOVIES_TO_TRAIN // 10
+TOTAL_NUMBER_OF_BULKS = int(MOVIES_TO_TRAIN / DOCS_PER_BULK)
 
 
 # Defines the training index name. The script loads raw vector data into this
@@ -159,14 +141,6 @@ def _wait_for_training_completion(os_client, model_id, model_dimensions):
 
 """
 Executes the IVF model training process for vector similarity search.
-
-This function performs the complete training workflow:
-1. Checks if model already exists and handles according to skip_if_exists
-2. Creates an ingest pipeline for text embedding
-3. Creates a training index with appropriate mappings
-4. Indexes training documents (10% of total dataset)
-5. Initiates IVF model training
-6. Monitors training completion
 
 Args:
     os_client (OpenSearch): OpenSearch client instance for API operations

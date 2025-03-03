@@ -159,9 +159,6 @@ def main(skip_indexing=False, filtered=False):
   # If you did not disable indexing, this will create a new index, set up an
   # ingest pipeline for automatically generating vector embeddings on ingest,
   # read the movies data (movie_source.py) and send it to the index.
-  #
-  # NOTE: Indexing takes an hour or more, depending on where you have deployed
-  # the model
   if not skip_indexing:
 
     # Create an ingest pipeline
