@@ -1,3 +1,24 @@
+"""
+A script for creating and querying an approximate k-NN search index using
+OpenSearch's IVF (Inverted File) implementation.
+
+This module demonstrates approximate k-NN search functionality using movie data
+and vector embeddings. It handles the creation of an OpenSearch index with IVF
+configuration, sets up an ingest pipeline for automatic embedding generation,
+and performs vector similarity searches.
+
+Key Features:
+    - Creates an OpenSearch index with IVF vector search capabilities 
+    - Configures and deploys a text embedding model
+    - Sets up an ingest pipeline for automatic embedding generation
+    - Trains an IVF model for approximate search
+    - Indexes movie data with vector embeddings
+    - Performs approximate k-NN queries
+
+Command-line Arguments:
+    --skip-indexing: Skip the index creation and data ingestion step --filtered:
+    Enable filtered search (currently unused)
+"""
 import argparse
 from auto_incrementing_counter import AutoIncrementingCounter
 from copy import deepcopy
@@ -35,9 +56,9 @@ TOTAL_NUMBER_OF_BULKS = NUMBER_OF_MOVIES // BULK_SIZE
 # models you can try.
 MODEL_SHORT_NAME = "all-MiniLM-L12-v2"
 MODEL_REGISTER_BODY = {
-  "name": model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['name'],
+  "name": model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['name'],
   "model_format": "TORCH_SCRIPT",
-  "version": model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['version']
+  "version": model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['version']
 }
 
 
@@ -77,13 +98,10 @@ simple_ann_query={
       EMBEDDING_FIELD_NAME: {
         "vector": [],
         "k": 4
-      }
-    }
-  }
-}
+}}}}
 
 
-def main(skip_indexing=False, filtered=False):
+def main(skip_indexing=False):
   # Info level logging.
   logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s', 
@@ -100,23 +118,20 @@ def main(skip_indexing=False, filtered=False):
   logging.info(f"Finding or deploying model {MODEL_SHORT_NAME}")
   model_id = model_utils.find_or_deploy_model(
     os_client=os_client,
-    model_name=model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['name'],
+    model_name=model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['name'],
     body=MODEL_REGISTER_BODY
   )
 
   # If you did not disable indexing, this will create a new index, set up an
   # ingest pipeline for automatically generating vector embeddings on ingest,
   # read the movies data (movie_source.py) and send it to the index.
-  #
-  # NOTE: Indexing takes an hour or more, depending on where you have deployed
-  # the model
   if not skip_indexing:
 
     # Create an IVF model
     training_model = ivf_training.train(
       os_client=os_client,
       model_id=model_id,
-      model_dimensions=model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['dimensions'],
+      model_dimensions=model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['dimensions'],
       skip_if_exists=False
     )
 
@@ -174,5 +189,4 @@ if __name__ == "__main__":
       " to skip the from-scratch creation of the index.",
   )
   parser.add_argument("--skip-indexing", default=False, action="store_true")
-  parser.add_argument("--filtered", default=False, action="store_true")
-  main(skip_indexing=parser.parse_args().skip_indexing, filtered=parser.parse_args().filtered)
+  main(skip_indexing=parser.parse_args().skip_indexing)
