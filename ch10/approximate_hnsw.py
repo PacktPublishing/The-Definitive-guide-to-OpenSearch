@@ -1,3 +1,22 @@
+"""
+A script for creating and querying an approximate k-NN search index using
+OpenSearch's FAISS HNSW implementation.
+
+This module demonstrates approximate k-NN search functionality using movie data
+and vector embeddings. It handles the creation of an OpenSearch index with HNSW
+(Hierarchical Navigable Small World) configuration, sets up an ingest pipeline
+for automatic embedding generation, and performs vector similarity searches.
+
+Key Features:
+    - Creates an OpenSearch index with HNSW vector search capabilities
+    - Configures and deploys a text embedding model
+    - Sets up an ingest pipeline for automatic embedding generation
+    - Indexes movie data with vector embeddings
+    - Performs approximate k-NN queries
+
+Command-line Arguments:
+    --skip-indexing: Skip the index creation and data ingestion
+"""
 import argparse
 from auto_incrementing_counter import AutoIncrementingCounter
 from copy import deepcopy
@@ -16,16 +35,14 @@ import opensearchpy.helpers
 # and for the examples to be self-contained
 
 
-# Defines the index and pipelines created by the script. If you change these
-# here, you'll need to change the other example scripts to use the correct index
-# and pipeline!
+# Defines the index and pipelines created by the script.
 INDEX_NAME = 'approximate_movies_hnsw'
 PIPELINE_NAME = 'approximate_pipeline_hnsw'
 
 # Set the bulk size. If your indexing requests are timing out, make this
 # smaller.
 BULK_SIZE = 1000
-NUMBER_OF_MOVIES = 100000
+NUMBER_OF_MOVIES = movie_source.TOTAL_MOVIES
 TOTAL_NUMBER_OF_BULKS = NUMBER_OF_MOVIES // BULK_SIZE
 
 # You can try out other models to see how they behave for the movies data set.
@@ -33,9 +50,9 @@ TOTAL_NUMBER_OF_BULKS = NUMBER_OF_MOVIES // BULK_SIZE
 # models you can try.
 MODEL_SHORT_NAME = "all-MiniLM-L12-v2"
 MODEL_REGISTER_BODY = {
-  "name": model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['name'],
+  "name": model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['name'],
   "model_format": "TORCH_SCRIPT",
-  "version": model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['version']
+  "version": model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['version']
 }
 
 
@@ -46,7 +63,7 @@ EMBEDDING_FIELD_NAME = 'embedding'
 FAISS_HNSW_FIELD = {
   "embedding": {
     "type": "knn_vector",
-    "dimension": model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['dimensions'],
+    "dimension": model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['dimensions'],
     "method": {
       "name": "hnsw",
       "engine": "faiss",
@@ -55,27 +72,7 @@ FAISS_HNSW_FIELD = {
         "m": 64,
         "ef_construction": 512,
         "ef_search": 16
-      }
-    }
-  }
-}
-
-
-FAISS_IVF_FIELD = {
-  "embedding": {
-    "type": "knn_vector",
-    "dimension": model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['dimensions'],
-    "method": {
-      "name": "ivf",
-      "engine": "faiss",
-      "space_type": "l2",
-      "parameters": {
-        "nlist": 4,
-        "nprobes": 1
-      }
-    }
-  }
-}
+}}}}
 
 
 # Definition for the ingest pipeline. Maps the EMBEDDING_SOURCE_FIELD to the
@@ -103,17 +100,13 @@ simple_ann_query={
       EMBEDDING_FIELD_NAME: {
         "vector": [],
         "k": 4
-      }
-    }
-  }
-}
+}}}}
 
 
 # Main function. Finds or loads the embedding model, creates the index (unless
 # --skip-indexing is a command-line paramater), creates an embedding for the
-# query "A sweeping space opera about good and evil centered around a powerful
-# family set in the future" and then runs the exact query and prints the search
-# response.
+# query "Sci-fi about the force and jedis" and then runs the exact query and
+# prints the search response.
 def main(skip_indexing=False, filtered=False):
   # Info level logging.
   logging.basicConfig(
@@ -131,7 +124,7 @@ def main(skip_indexing=False, filtered=False):
   logging.info(f"Finding or deploying model {MODEL_SHORT_NAME}")
   model_id = model_utils.find_or_deploy_model(
     os_client=os_client,
-    model_name=model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['name'],
+    model_name=model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['name'],
     body=MODEL_REGISTER_BODY
   )
 
