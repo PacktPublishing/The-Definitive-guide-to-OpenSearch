@@ -27,7 +27,8 @@ JSON movie record per line.
 import json
 
 
-MOVIES_FILE_PATH = 'movies_100k_LLM_generated.json'
+MOVIES_FILE_PATH = 'movies_reduced.ndjson'
+TOTAL_MOVIES = 10000
 
 
 # Treatment of numbers. 
