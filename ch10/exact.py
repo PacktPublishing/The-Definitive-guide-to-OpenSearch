@@ -180,7 +180,7 @@ def main(skip_indexing=False, filtered=False, user_query=None):
   else:
     logging.info(f"Skipping indexing")
 
-  # Run a query. Calls the LLM to generate a vector embedding for the question
+  # Run a query. Calls the LLM to generate a vector embedding for the user query
   # (see model_utils.py) and then adds that embedding to the OpenSearch query.
   logging.info(f"Running query")
   if filtered:
@@ -189,13 +189,12 @@ def main(skip_indexing=False, filtered=False, user_query=None):
     query = deepcopy(script_query)
   question = user_query if user_query else "Sci-fi about the force and jedis"
   query_embedding = model_utils.create_embedding(os_client, model_id, question)
+
   expr = jsonpath_ng.ext.parser.parse('query.script_score.script.params.query_value')
   query = expr.update(query, query_embedding)
   response = os_client.search(index=INDEX_NAME, body=query)
 
-  # Print the search response. The response contains the top 4 hits (the query
-  # specifies "size": 4), which are the movies that are most similar to the
-  # query.
+  # Print the search response.
   logging.info(f"Query response")
   for hit in response['hits']['hits']:
     logging.info(f"score: {hit['_score']}")
@@ -221,7 +220,6 @@ if __name__ == "__main__":
   parser.add_argument("--query", default="Sci-fi about the force and jedis",
                       action="store")
   args = parser.parse_args()
-  logging.info(args)
-  main(skip_indexing=parser.parse_args().skip_indexing,
-       filtered=parser.parse_args().filtered,
-       user_query=parser.parse_args().query)
+  main(skip_indexing=args.skip_indexing,
+       filtered=args.filtered,
+       user_query=args.query)

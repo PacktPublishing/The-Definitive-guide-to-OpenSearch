@@ -94,12 +94,11 @@ ingest_pipeline_definition = {
 
 
 simple_ann_query={
-  "size": 4,
   "query": {
     "knn": {
       EMBEDDING_FIELD_NAME: {
         "vector": [],
-        "k": 4
+        "k": 10
 }}}}
 
 
@@ -107,7 +106,7 @@ simple_ann_query={
 # --skip-indexing is a command-line paramater), creates an embedding for the
 # query "Sci-fi about the force and jedis" and then runs the exact query and
 # prints the search response.
-def main(skip_indexing=False, filtered=False):
+def main(skip_indexing=False, user_query=None):
   # Info level logging.
   logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s', 
@@ -156,20 +155,17 @@ def main(skip_indexing=False, filtered=False):
   else:
     logging.info(f"Skipping indexing")
 
-  # Run a query. Calls the LLM to generate a vector embedding for the question
+  # Run a query. Calls the LLM to generate a vector embedding for the user query
   # (see model_utils.py) and then adds that embedding to the OpenSearch query.
   logging.info(f"Running query")
   query = deepcopy(simple_ann_query)
-  question = "Sci-fi about the force and jedis"
-  query_embedding = model_utils.create_embedding(os_client, model_id, question)
+  query_embedding = model_utils.create_embedding(os_client, model_id, user_query)
 
   expr = jsonpath_ng.ext.parser.parse(f'query.knn.{EMBEDDING_FIELD_NAME}.vector')
   query = expr.update(query, query_embedding)
   response = os_client.search(index=INDEX_NAME, body=query)
 
-  # Print the search response. The response contains the top 4 hits (the query
-  # specifies "size": 4), which are the movies that are most similar to the
-  # query.
+  # Print the search response.
   logging.info(f"Query response")
   for hit in response['hits']['hits']:
     logging.info(f"score: {hit['_score']}")
@@ -185,5 +181,8 @@ if __name__ == "__main__":
       " to skip the from-scratch creation of the index.",
   )
   parser.add_argument("--skip-indexing", default=False, action="store_true")
-  parser.add_argument("--filtered", default=False, action="store_true")
-  main(skip_indexing=parser.parse_args().skip_indexing, filtered=parser.parse_args().filtered)
+  parser.add_argument("--query", default="Sci-fi about the force and jedis",
+                      action="store")
+  args = parser.parse_args()
+  main(skip_indexing=args.skip_indexing,
+       user_query=args.query)

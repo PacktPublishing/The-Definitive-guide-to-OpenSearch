@@ -85,11 +85,11 @@ simple_ann_query={
     "knn": {
       EMBEDDING_FIELD_NAME: {
         "vector": [],
-        "k": 4
+        "k": 10
 }}}}
 
 
-def main(skip_indexing=False):
+def main(skip_indexing=False, user_query=None):
   # Info level logging.
   logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s', 
@@ -152,8 +152,7 @@ def main(skip_indexing=False):
   # (see model_utils.py) and then adds that embedding to the OpenSearch query.
   logging.info(f"Running query")
   query = deepcopy(simple_ann_query)
-  question = "Sci-fi about the force and jedis"
-  query_embedding = model_utils.create_embedding(os_client, model_id, question)
+  query_embedding = model_utils.create_embedding(os_client, model_id, user_query)
 
   expr = jsonpath_ng.ext.parser.parse(f'query.knn.{EMBEDDING_FIELD_NAME}.vector')
   query = expr.update(query, query_embedding)
@@ -177,4 +176,8 @@ if __name__ == "__main__":
       " to skip the from-scratch creation of the index.",
   )
   parser.add_argument("--skip-indexing", default=False, action="store_true")
-  main(skip_indexing=parser.parse_args().skip_indexing)
+  parser.add_argument("--query", default="Sci-fi about the force and jedis",
+                      action="store")
+  args = parser.parse_args()
+  main(skip_indexing=args.skip_indexing,
+       user_query=args.query)
