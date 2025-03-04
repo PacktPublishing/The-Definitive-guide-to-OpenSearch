@@ -1,3 +1,25 @@
+"""
+A module for training an IVF-PQ (Inverted File with Product Quantization) model
+in OpenSearch.
+
+This module handles the training process for IVF-PQ approximate k-NN search,
+which requires a separate training step before creating the search index. It
+loads sample movie data, generates vector embeddings, and trains the IVF-PQ
+model using those embeddings.
+
+Key Features:
+    - Creates a training index for vector data
+    - Sets up an ingest pipeline for embedding generation
+    - Indexes a subset of documents for training (10% of total documents)
+    - Trains an IVF-PQ model with specified parameters
+    - Monitors training completion status
+
+Note:
+    - Training requires approximately 10% of the total document set
+    - The training process must complete before creating the IVF-PQ search index
+    - Model training parameters (m=8, code_size=8) are configured for general
+      use
+"""
 from copy import deepcopy
 import index_utils
 import logging
@@ -8,8 +30,9 @@ import time
 
 
 # We recommend 10% of the total documents for training.
-TOTAL_NUMBER_OF_BULKS = 10
-DOCS_PER_BULK = 1000
+MOVIES_TO_TRAIN = int(movie_source.TOTAL_MOVIES * .10)
+DOCS_PER_BULK = MOVIES_TO_TRAIN // 10
+TOTAL_NUMBER_OF_BULKS = int(MOVIES_TO_TRAIN / DOCS_PER_BULK)
 
 
 # Defines the training index name. The script loads raw vector data into this
@@ -120,38 +143,12 @@ def _wait_for_training_completion(os_client, model_id, model_dimensions):
     time.sleep(1)
 
 
-
-"""
-Executes the IVF model training process for vector similarity search.
-
-This function performs the complete training workflow:
-1. Checks if model already exists and handles according to skip_if_exists
-2. Creates an ingest pipeline for text embedding
-3. Creates a training index with appropriate mappings
-4. Indexes training documents (10% of total dataset)
-5. Initiates IVF model training
-6. Monitors training completion
-
-Args:
-    os_client (OpenSearch): OpenSearch client instance for API operations
-    model_id (str): ID of the text embedding model to use for vector creation
-    model_dimensions (int): Dimension size of the embedding vectors
-    skip_if_exists (bool, optional): If True, skips training when model exists.
-                                    If False, deletes and retrains. Defaults to True.
-
-Returns:
-    str: Name of the trained model (TRAINING_MODEL_NAME)
-
-Note:
-    - Training requires approximately 10% of total documents for optimal results
-    - The process can take several minutes depending on data size
-    - Existing models will be preserved if skip_if_exists=True
-"""
-def train(os_client: OpenSearch, model_id, model_dimensions, skip_if_exists=True):
+# Main entry point. Call train to do the PQ training on 10% of the source data,
+# preparing for indexing the full corpus.
+def train(os_client: OpenSearch, embedding_model_id, model_dimensions, skip_if_exists=True):
 
   # If the model already exists, and skip_if_exists is true, then don't create a
   # new model. Otherwise, delete the existing model.
-  logging.info(f'Model state: _get_model_state(os_client)')
   state = _get_model_state(os_client)
   if state and state == 'created':
     logging.info(f"Model {TRAINING_MODEL_NAME} already exists.")
@@ -170,7 +167,7 @@ def train(os_client: OpenSearch, model_id, model_dimensions, skip_if_exists=True
   # Create an ingest pipeline
   logging.info(f"Creating ingest pipeline {TRAINING_PIPELINE_NAME}")
   pipeline_definition = deepcopy(training_ingest_pipeline_definition)
-  pipeline_definition['processors'][0]['text_embedding']['model_id'] = model_id
+  pipeline_definition['processors'][0]['text_embedding']['model_id'] = embedding_model_id
   os_client.ingest.put_pipeline(id=TRAINING_PIPELINE_NAME, body=pipeline_definition)
 
   # Create the training index
@@ -203,5 +200,5 @@ def train(os_client: OpenSearch, model_id, model_dimensions, skip_if_exists=True
     body=training_request_body
   )
   logging.info(f"Waiting for training to complete for model {TRAINING_MODEL_NAME}")
-  _wait_for_training_completion(os_client, model_id, model_dimensions)
+  _wait_for_training_completion(os_client, embedding_model_id, model_dimensions)
   return TRAINING_MODEL_NAME

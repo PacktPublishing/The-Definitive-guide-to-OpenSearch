@@ -1,3 +1,16 @@
+"""
+A script for implementing approximate k-NN search using IVF-PQ (Inverted File
+with Product Quantization) in OpenSearch.
+
+This module demonstrates vector similarity search using IVF-PQ indexing on movie
+data. It handles model deployment, IVF-PQ model training, index creation, data
+ingestion with automatic embedding generation, and vector similarity search
+queries.
+
+Command-line Arguments:
+    --skip-indexing: Skip the index creation and data ingestion step --filtered:
+    Enable filtered search (currently unused)
+"""
 import argparse
 from auto_incrementing_counter import AutoIncrementingCounter
 from copy import deepcopy
@@ -17,16 +30,14 @@ import opensearchpy.helpers
 # and for the examples to be self-contained
 
 
-# Defines the search index and pipelines created by the script. If you change these
-# here, you'll need to change the other example scripts to use the correct index
-# and pipeline!
+# Defines the search index and pipelines created by the script.
 INDEX_NAME = 'approximate_movies_ivf_pq'
 PIPELINE_NAME = 'approximate_pipeline_ivf_pq'
 
 # Set the bulk size. If your indexing requests are timing out, make this
 # smaller.
 BULK_SIZE = 1000
-NUMBER_OF_MOVIES = 100000
+NUMBER_OF_MOVIES = movie_source.TOTAL_MOVIES
 TOTAL_NUMBER_OF_BULKS = NUMBER_OF_MOVIES // BULK_SIZE
 
 # You can try out other models to see how they behave for the movies data set.
@@ -34,9 +45,9 @@ TOTAL_NUMBER_OF_BULKS = NUMBER_OF_MOVIES // BULK_SIZE
 # models you can try.
 MODEL_SHORT_NAME = "all-MiniLM-L12-v2"
 MODEL_REGISTER_BODY = {
-  "name": model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['name'],
+  "name": model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['name'],
   "model_format": "TORCH_SCRIPT",
-  "version": model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['version']
+  "version": model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['version']
 }
 
 
@@ -70,19 +81,15 @@ ingest_pipeline_definition = {
 
 
 simple_ann_query={
-  "size": 4,
   "query": {
     "knn": {
       EMBEDDING_FIELD_NAME: {
         "vector": [],
         "k": 4
-      }
-    }
-  }
-}
+}}}}
 
 
-def main(skip_indexing=False, filtered=False):
+def main(skip_indexing=False):
   # Info level logging.
   logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s', 
@@ -99,23 +106,20 @@ def main(skip_indexing=False, filtered=False):
   logging.info(f"Finding or deploying model {MODEL_SHORT_NAME}")
   model_id = model_utils.find_or_deploy_model(
     os_client=os_client,
-    model_name=model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['name'],
+    model_name=model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['name'],
     body=MODEL_REGISTER_BODY
   )
 
   # If you did not disable indexing, this will create a new index, set up an
   # ingest pipeline for automatically generating vector embeddings on ingest,
   # read the movies data (movie_source.py) and send it to the index.
-  #
-  # NOTE: Indexing takes an hour or more, depending on where you have deployed
-  # the model
   if not skip_indexing:
 
     # Create an IVF model
     training_model = ivf_pq_training.train(
       os_client=os_client,
-      model_id=model_id,
-      model_dimensions=model_utils.HUGGING_FACE_MODELS[MODEL_SHORT_NAME]['dimensions'],
+      embedding_model_id=model_id,
+      model_dimensions=model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['dimensions'],
       skip_if_exists=False
     )
 
@@ -153,7 +157,7 @@ def main(skip_indexing=False, filtered=False):
 
   expr = jsonpath_ng.ext.parser.parse(f'query.knn.{EMBEDDING_FIELD_NAME}.vector')
   query = expr.update(query, query_embedding)
-  response = os_client.search(index=INDEX_NAME, body=query, size=10)
+  response = os_client.search(index=INDEX_NAME, body=query)
 
   # Print the search response. The response contains the top 4 hits (the query
   # specifies "size": 4), which are the movies that are most similar to the
@@ -173,5 +177,4 @@ if __name__ == "__main__":
       " to skip the from-scratch creation of the index.",
   )
   parser.add_argument("--skip-indexing", default=False, action="store_true")
-  parser.add_argument("--filtered", default=False, action="store_true")
-  main(skip_indexing=parser.parse_args().skip_indexing, filtered=parser.parse_args().filtered)
+  main(skip_indexing=parser.parse_args().skip_indexing)
