@@ -135,12 +135,8 @@ filtered_script_query = {
 # query "A sweeping space opera about good and evil centered around a powerful
 # family set in the future" and then runs the exact query and prints the search
 # response.
-def main(skip_indexing=False, filtered=False):
-  # Info level logging.
-  logging.basicConfig(
-    format='%(asctime)s - %(levelname)s - %(message)s', 
-    datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.INFO)
+def main(skip_indexing=False, filtered=False, user_query=None):
+  logging.info(f"Query: {user_query}")
 
   # See os_client_factory.py for details on the set up for the opensearch-py
   # client.
@@ -191,7 +187,7 @@ def main(skip_indexing=False, filtered=False):
     query = deepcopy(filtered_script_query)
   else:
     query = deepcopy(script_query)
-  question = "Sci-fi about the force and jedis"
+  question = user_query if user_query else "Sci-fi about the force and jedis"
   query_embedding = model_utils.create_embedding(os_client, model_id, question)
   expr = jsonpath_ng.ext.parser.parse('query.script_score.script.params.query_value')
   query = expr.update(query, query_embedding)
@@ -209,6 +205,12 @@ def main(skip_indexing=False, filtered=False):
 
 
 if __name__ == "__main__":
+  # Info level logging.
+  logging.basicConfig(
+    format='%(asctime)s - %(levelname)s - %(message)s', 
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO)
+
   parser = argparse.ArgumentParser(
       prog="main",
       description="Loads movie data, and runs exact kNN queries. Use --skip-indexing"
@@ -216,4 +218,10 @@ if __name__ == "__main__":
   )
   parser.add_argument("--skip-indexing", default=False, action="store_true")
   parser.add_argument("--filtered", default=False, action="store_true")
-  main(skip_indexing=parser.parse_args().skip_indexing, filtered=parser.parse_args().filtered)
+  parser.add_argument("--query", default="Sci-fi about the force and jedis",
+                      action="store")
+  args = parser.parse_args()
+  logging.info(args)
+  main(skip_indexing=parser.parse_args().skip_indexing,
+       filtered=parser.parse_args().filtered,
+       user_query=parser.parse_args().query)
