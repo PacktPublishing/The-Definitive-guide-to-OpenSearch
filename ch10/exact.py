@@ -195,7 +195,7 @@ def main(skip_indexing=False, filtered=False):
   query_embedding = model_utils.create_embedding(os_client, model_id, question)
   expr = jsonpath_ng.ext.parser.parse('query.script_score.script.params.query_value')
   query = expr.update(query, query_embedding)
-  response = os_client.search(index=INDEX_NAME, body=query, size=10)
+  response = os_client.search(index=INDEX_NAME, body=query)
 
   # Print the search response. The response contains the top 4 hits (the query
   # specifies "size": 4), which are the movies that are most similar to the

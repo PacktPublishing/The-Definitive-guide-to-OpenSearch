@@ -165,7 +165,7 @@ def main(skip_indexing=False, filtered=False):
 
   expr = jsonpath_ng.ext.parser.parse(f'query.knn.{EMBEDDING_FIELD_NAME}.vector')
   query = expr.update(query, query_embedding)
-  response = os_client.search(index=INDEX_NAME, body=query, size=10)
+  response = os_client.search(index=INDEX_NAME, body=query)
 
   # Print the search response. The response contains the top 4 hits (the query
   # specifies "size": 4), which are the movies that are most similar to the
