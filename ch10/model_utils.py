@@ -12,8 +12,8 @@ import logging
 import time
 
 
-# Models and dimensions deployable directly to OpenSearch.
-HUGGING_FACE_MODELS = {
+# Dense models and dimensions deployable directly to OpenSearch.
+DENSE_MODELS_HF = {
   "all-distilroberta-v1": {
     "name": "huggingface/sentence-transformers/all-distilroberta-v1",
     "dimensions": 768,
@@ -69,6 +69,35 @@ HUGGING_FACE_MODELS = {
     "dimensions": 512,
     "version": "1.0.1"
   },
+}
+
+
+# Sparse models directly deployable to OpenSearch
+SPARSE_MODELS_HF={
+  "opensearch-neural-sparse-encoding-v1": {
+    "name": "amazon/neural-sparse/opensearch-neural-sparse-encoding-v1",
+    "version": "1.0.1"
+  },
+  "opensearch-neural-sparse-encoding-v2-distill": {
+    "name": "amazon/neural-sparse/opensearch-neural-sparse-encoding-v2-distill",
+    "version": "1.0.0"
+  },
+  "opensearch-neural-sparse-encoding-doc-v1": {
+    "name": "amazon/neural-sparse/opensearch-neural-sparse-encoding-doc-v1",
+    "version": "1.0.1"
+  },
+  "opensearch-neural-sparse-encoding-doc-v2-distill": {
+    "name": "amazon/neural-sparse/opensearch-neural-sparse-encoding-doc-v2-distill",
+    "version": "1.0.0"
+  },
+  "opensearch-neural-sparse-encoding-doc-v2-mini": {
+    "name": "amazon/neural-sparse/opensearch-neural-sparse-encoding-doc-v2-mini",
+    "version": "1.0.0"
+  },
+  "opensearch-neural-sparse-tokenizer-v1": {
+    "name": "amazon/neural-sparse/opensearch-neural-sparse-tokenizer-v1",
+    "version": "1.0.1"
+  }
 }
 
 
