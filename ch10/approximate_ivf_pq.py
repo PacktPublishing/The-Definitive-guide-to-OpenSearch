@@ -90,12 +90,6 @@ simple_ann_query={
 
 
 def main(skip_indexing=False, user_query=None):
-  # Info level logging.
-  logging.basicConfig(
-    format='%(asctime)s - %(levelname)s - %(message)s', 
-    datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.INFO)
-
   # See os_client_factory.py for details on the set up for the opensearch-py
   # client.
   os_client = OSClientFactory().client()
@@ -170,6 +164,12 @@ def main(skip_indexing=False, user_query=None):
 
 
 if __name__ == "__main__":
+  # Info level logging.
+  logging.basicConfig(
+    format='%(asctime)s - %(levelname)s - %(message)s', 
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO)
+
   parser = argparse.ArgumentParser(
       prog="main",
       description="Loads movie data, and runs approximate kNN queries. Use --skip-indexing"

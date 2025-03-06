@@ -43,9 +43,17 @@ BASE_SETTINGS = {
       "number_of_shards": 1,
       "number_of_replicas": 1,
       "knn.advanced.filtered_exact_search_threshold": 0,
-      "knn": True
+      "knn": True,
     },
     "mappings": {
+      # "_source": {
+      #   "enabled": False
+      # },
+      "_source": {
+        "excludes": ["id", "year", "duration", "genres", "rating",
+                     "vote", "revenue", "thumbnail", "directors",
+                     "actors"]
+      },
       "properties": {
         "id": {"type": "integer"},
         "title": {"type": "text"},

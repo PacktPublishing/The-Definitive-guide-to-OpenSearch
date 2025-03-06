@@ -1,30 +1,8 @@
-"""
-A script for creating and querying an approximate k-NN search index using
-OpenSearch's IVF (Inverted File) implementation.
-
-This module demonstrates approximate k-NN search functionality using movie data
-and vector embeddings. It handles the creation of an OpenSearch index with IVF
-configuration, sets up an ingest pipeline for automatic embedding generation,
-and performs vector similarity searches.
-
-Key Features:
-    - Creates an OpenSearch index with IVF vector search capabilities 
-    - Configures and deploys a text embedding model
-    - Sets up an ingest pipeline for automatic embedding generation
-    - Trains an IVF model for approximate search
-    - Indexes movie data with vector embeddings
-    - Performs approximate k-NN queries
-
-Command-line Arguments:
-    --skip-indexing: Skip the index creation and data ingestion step --filtered:
-    Enable filtered search (currently unused)
-"""
 import argparse
 from auto_incrementing_counter import AutoIncrementingCounter
 from copy import deepcopy
 import jsonpath_ng.ext
 import index_utils
-import ivf_training
 import logging
 import model_utils
 import movie_source
@@ -33,17 +11,16 @@ import opensearchpy.helpers
 
 
 # NOTE: Much of the code is duplicated across the various examples. Better
-# coding practice is to build modules/class to encapsulate the duplicated code.
+# coding practice is to build modules/classes to encapsulate the duplicated code.
 # We've constructed the examples this way to facilitate expositon in the book
 # and for the examples to be self-contained
 
 
-# Defines the search index and pipelines created by the script. If you change these
+# Defines the index and pipelines created by the script. If you change these
 # here, you'll need to change the other example scripts to use the correct index
 # and pipeline!
-INDEX_NAME = 'approximate_movies_ivf'
-PIPELINE_NAME = 'approximate_pipeline_ivf'
-
+INDEX_NAME = 'approximate_movies_sq'
+PIPELINE_NAME = 'approximate_sq_pipeline'
 
 # Set the bulk size. If your indexing requests are timing out, make this
 # smaller.
@@ -62,15 +39,31 @@ MODEL_REGISTER_BODY = {
 }
 
 
-# Defines the source, destination, and mapping for the embedding field. You can
-# modify movie_source.py to change how the data is treated. 
+# Defines the source text for the embedding field. You can modify
+# movie_source.py to change how the data is treated. 
 EMBEDDING_SOURCE_FIELD_NAME = 'embedding_source'
 EMBEDDING_FIELD_NAME = 'embedding'
-FAISS_IVF_FIELD = {
+FAISS_SQ_FIELD = {
   "embedding": {
     "type": "knn_vector",
-    "model_id": ""
-}}
+    "dimension": model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['dimensions'],
+    "space_type": "l2",
+    "method": {
+      "name": "hnsw",
+      "engine": "faiss",
+      "parameters": {
+        "encoder": {
+          "name": "sq",
+          "parameters": {
+            "clip": True
+          }
+        },
+        "m": 64,
+        "ef_construction": 512
+      }
+    }
+  }
+}
 
 
 # Definition for the ingest pipeline. Maps the EMBEDDING_SOURCE_FIELD to the
@@ -97,9 +90,16 @@ simple_ann_query={
       EMBEDDING_FIELD_NAME: {
         "vector": [],
         "k": 10
-}}}}
+      }
+    }
+  }
+}
 
 
+# Main function. Finds or loads the embedding model, creates the index (unless
+# --skip-indexing is a command-line paramater), creates an embedding for the
+# query "Sci-fi about the force and jedis" and then runs the exact query and
+# prints the search response.
 def main(skip_indexing=False, user_query=None):
   # See os_client_factory.py for details on the set up for the opensearch-py
   # client.
@@ -118,15 +118,10 @@ def main(skip_indexing=False, user_query=None):
   # If you did not disable indexing, this will create a new index, set up an
   # ingest pipeline for automatically generating vector embeddings on ingest,
   # read the movies data (movie_source.py) and send it to the index.
+  #
+  # NOTE: Indexing takes an hour or more, depending on where you have deployed
+  # the model
   if not skip_indexing:
-
-    # Create an IVF model
-    training_model = ivf_training.train(
-      os_client=os_client,
-      model_id=model_id,
-      model_dimensions=model_utils.DENSE_MODELS_HF[MODEL_SHORT_NAME]['dimensions'],
-      skip_if_exists=False
-    )
 
     # Create an ingest pipeline
     pipeline_definition = deepcopy(ingest_pipeline_definition)
@@ -135,13 +130,11 @@ def main(skip_indexing=False, user_query=None):
 
     # Create an index with the pipeline
     logging.info(f"Creating index {INDEX_NAME}")
-    faiss_ivf_field = deepcopy(FAISS_IVF_FIELD)
-    faiss_ivf_field['embedding']['model_id'] = training_model
     index_utils.delete_then_create_index(
       os_client=os_client,
       index_name=INDEX_NAME,
       pipeline_name=PIPELINE_NAME,
-      additional_fields=faiss_ivf_field
+      additional_fields=FAISS_SQ_FIELD
     )
 
     # Read and add documents to the index with the opensearch-py bulk helper.
@@ -153,7 +146,7 @@ def main(skip_indexing=False, user_query=None):
   else:
     logging.info(f"Skipping indexing")
 
-  # Run a query. Calls the LLM to generate a vector embedding for the user query
+  # Run a query. Calls the LLM to generate a vector embedding for the question
   # (see model_utils.py) and then adds that embedding to the OpenSearch query.
   logging.info(f"Running query")
   query = deepcopy(simple_ann_query)
@@ -161,7 +154,7 @@ def main(skip_indexing=False, user_query=None):
 
   expr = jsonpath_ng.ext.parser.parse(f'query.knn.{EMBEDDING_FIELD_NAME}.vector')
   query = expr.update(query, query_embedding)
-  response = os_client.search(index=INDEX_NAME, body=query)
+  response = os_client.search(index=INDEX_NAME, body=query, size=10)
 
   # Print the search response. The response contains the top 4 hits (the query
   # specifies "size": 4), which are the movies that are most similar to the
@@ -170,8 +163,8 @@ def main(skip_indexing=False, user_query=None):
   for hit in response['hits']['hits']:
     logging.info(f"score: {hit['_score']}")
     logging.info(f"title: {hit['_source']['title']}")
-    logging.info(f"plot: {hit['_source']['plot']}")
-    logging.info(f"embedding source: {hit['_source'][EMBEDDING_SOURCE_FIELD_NAME]}\n")
+    logging.info(f"plot: {hit['_source']['plot']}\n")
+    logging.info(f"embedding source: {hit['_source'][EMBEDDING_SOURCE_FIELD_NAME]}")
 
 
 if __name__ == "__main__":
