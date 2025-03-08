@@ -88,6 +88,7 @@ CONVERSATION_SEARCH_QUERY = {
       "fields": ['title^2', 'plot']
     }
   },
+  "_source": ["title", "plot", "embedding_source"],
   "ext": {
     "generative_qa_parameters": {
       "llm_model": "bedrock/claude",
@@ -213,7 +214,7 @@ def main(skip_indexing=False):
     search_query['query']['simple_query_string']['query'] = question
     search_query['ext']['generative_qa_parameters']['llm_question'] = question
     search_query['ext']['generative_qa_parameters']['memory_id'] = conversation_memory_id
-    response = os_client.search(index=INDEX_NAME, body=search_query)
+    response = os_client.search(index=INDEX_NAME, body=search_query, timeout=60)
 
     logging.info(f"These are the movies retrieved for the question: {question}")
     for hit in response['hits']['hits']:
