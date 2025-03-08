@@ -1,3 +1,27 @@
+"""OpenSearch ML Connector utilities for Amazon Bedrock integration.
+
+This module provides utility functions for managing OpenSearch ML connectors,
+specifically focused on creating and managing Amazon Bedrock connectors. It handles
+the deployment, registration, and cleanup of connectors in OpenSearch.
+
+Key Functions:
+    - delete_then_create_connector: Main entry point for connector management
+    - connector_id_for: Retrieves connector ID by name
+    - connector_model_id_for_connector: Finds model ID associated with a connector
+    - _deploy_connector: Deploys a new connector
+    - _register_connector: Registers a connector with OpenSearch
+    - _wait_deploy_connector: Waits for connector deployment to complete
+
+The module supports creating connectors with AWS SigV4 authentication and handles
+temporary credentials for AWS services. It includes automatic cleanup of existing
+connectors and models before creating new ones.
+
+Constants:
+    CONNECTOR_NAME: Default name for the Bedrock connector
+    CONNECTOR_REGISTER_BODY: Template for connector registration
+"""
+
+
 import copy
 from opensearchpy import OpenSearch
 import logging
@@ -14,6 +38,7 @@ CONNECTOR_REGISTER_BODY = {
 
 
 def _deploy_connector(os_client: OpenSearch, body):
+  '''Deploys a new ML connector in OpenSearch.'''
   response = os_client.transport.perform_request(
     'POST', '/_plugins/_ml/connectors/_create',
     body=body)
@@ -22,6 +47,7 @@ def _deploy_connector(os_client: OpenSearch, body):
   
 
 def _register_connector(os_client: OpenSearch, body):
+  '''Registers a connector with OpenSearch.'''
   response = os_client.transport.perform_request(
     'POST', '/_plugins/_ml/models/_register',
     body=body)
@@ -29,6 +55,7 @@ def _register_connector(os_client: OpenSearch, body):
 
 
 def _wait_deploy_connector(os_client: OpenSearch, task_id):
+  '''Busy waits for the task to complete or fail.'''
   response = os_client.transport.perform_request('GET', f'/_plugins/_ml/tasks/{task_id}')
   logging.info(f"Task status: {response['state']}")
   state = response['state']
@@ -45,6 +72,8 @@ def _wait_deploy_connector(os_client: OpenSearch, task_id):
 
 
 def connector_id_for(os_client: OpenSearch, connector_name):
+  '''Searches the deployed connectors in OpenSearch to find a connector with
+  name connector_name'''
   logging.info(f"Searching for connector {connector_name}")
   connectors = os_client.transport.perform_request(
     'GET', '/_plugins/_ml/connectors/_search',
@@ -61,6 +90,8 @@ def connector_id_for(os_client: OpenSearch, connector_name):
 
 
 def connector_model_id_for_connector(os_client: OpenSearch, connector_id):
+  '''Given a connector_id, finds the associated model and returns the model_id
+  for that model'''
   response = os_client.transport.perform_request(
     'GET', f'/_plugins/_ml/models/_search', body={"size": 10000})
   for model in response['hits']['hits']:
@@ -71,6 +102,8 @@ def connector_model_id_for_connector(os_client: OpenSearch, connector_id):
 
 
 def delete_then_create_connector(os_client: OpenSearch, connector_name, connector_body):
+  '''Locates a connector by name, deletes it and its associated model, then
+  creates a new connector with the provided body.'''
   connector_id = connector_id_for(os_client=os_client, connector_name=connector_name)
   if connector_id is not None:
     logging.info(f"Connector {connector_name} found. Deleting...")
@@ -93,44 +126,3 @@ def delete_then_create_connector(os_client: OpenSearch, connector_name, connecto
   response = _wait_deploy_connector(os_client=os_client, task_id=task_id)
   return {'connector_id': connector_id,
           'model_id': response['model_id']}
-
-
-if __name__ == '__main__':
-  import os_client_factory
-  import boto3
-  logging.basicConfig(
-    format='%(asctime)s - %(levelname)s - %(message)s', 
-    datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.INFO)
-
-  session = boto3.client('sts', os_client_factory.AWS_REGION).get_session_token()
-  os_client = os_client_factory.OSClientFactory().client()
-  delete_then_create_connector(os_client=os_client,
-                           connector_name=CONNECTOR_NAME,
-                           connector_body={
-    "name": "Amazon Bedrock",
-    "description": "Test connector for Amazon Bedrock",
-    "version": 1,
-    "protocol": "aws_sigv4",
-    "credential": {
-        "access_key": session['Credentials']['AccessKeyId'],
-        "secret_key": session['Credentials']['SecretAccessKey'],
-        "session_token": session['Credentials']['SessionToken']
-    },
-    "parameters": {
-        "region": f"{os_client_factory.AWS_REGION}",
-        "service_name": "bedrock",
-        "model": "anthropic.claude-v2"
-    },
-    "actions": [
-        {
-            "action_type": "predict",
-            "method": "POST",
-            "headers": {
-                "content-type": "application/json"
-            },
-            "url": "https://bedrock-runtime.${parameters.region}.amazonaws.com/model/${parameters.model}/invoke",
-            "request_body": "{\"prompt\":\"\\n\\nHuman: ${parameters.inputs}\\n\\nAssistant:\",\"max_tokens_to_sample\":300,\"temperature\":0.5,\"top_k\":250,\"top_p\":1,\"stop_sequences\":[\"\\\\n\\\\nHuman:\"]}"
-        }
-    ]
-})

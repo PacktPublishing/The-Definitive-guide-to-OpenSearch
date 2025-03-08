@@ -6,20 +6,20 @@ using environment variables for authentication and connection settings.
 
 Environment Variables:
     OPENSEARCH_HOST: Host address for OpenSearch (default: 'localhost')
-    OPENSEARCH_PORT: Port number for OpenSearch (default: 9200) 
+    OPENSEARCH_PORT: Port number for OpenSearch (default: 9200)
     OPENSEARCH_ADMIN_USER: Admin username for authentication (default: 'admin')
     OPENSEARCH_ADMIN_PASSWORD: Admin password for authentication (required)
+    AWS_REGION: The AWS region for Amazon Bedrock for the RAG example (default:
+    'us-west-2)
 
-The module creates a configured OpenSearch client with SSL enabled and 
-sets up cluster settings for ML features including:
-- Memory features
-- RAG pipeline features 
-- Model registration via URL
-- ML node execution
-- Trusted connector endpoints for AWS Bedrock
+The module creates a configured OpenSearch client with SSL enabled and sets up
+cluster settings for ML features including: - Memory features - RAG pipeline
+features - Model registration via URL - ML node execution - Trusted connector
+endpoints for AWS Bedrock
 
 Classes:
-    OSClientFactory: Factory class that creates and configures the OpenSearch client
+    OSClientFactory: Factory class that creates and configures the OpenSearch
+    client
 '''
 
 
