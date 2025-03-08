@@ -133,7 +133,7 @@ def main(skip_indexing=False, user_query=None):
     index_utils.delete_then_create_index(
       os_client=os_client,
       index_name=INDEX_NAME,
-      pipeline_name=PIPELINE_NAME,
+      ingest_pipeline_name=PIPELINE_NAME,
       additional_fields=FAISS_SQ_FIELD
     )
 

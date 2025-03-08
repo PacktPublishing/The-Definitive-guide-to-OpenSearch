@@ -1,7 +1,6 @@
 import argparse
 from auto_incrementing_counter import AutoIncrementingCounter
 from copy import deepcopy
-import jsonpath_ng.ext
 import index_utils
 import logging
 import model_utils
@@ -131,7 +130,7 @@ def main(skip_indexing=False, bi_encoder=False, doc_only=False, user_query=None)
     index_utils.delete_then_create_index(
       os_client=os_client,
       index_name=INDEX_NAME,
-      pipeline_name=PIPELINE_NAME,
+      ingest_pipeline_name=PIPELINE_NAME,
       additional_fields=KNN_FIELDS
     )
 

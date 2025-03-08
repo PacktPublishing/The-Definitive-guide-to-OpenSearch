@@ -174,7 +174,7 @@ def train(os_client: OpenSearch, embedding_model_id, model_dimensions, skip_if_e
   logging.info(f"Creating training index {TRAINING_INDEX_NAME}")
   index_utils.delete_then_create_index(os_client=os_client,
                                         index_name=TRAINING_INDEX_NAME,
-                                        pipeline_name=TRAINING_PIPELINE_NAME,
+                                        ingest_pipeline_name=TRAINING_PIPELINE_NAME,
                                         additional_fields={
                                           TRAINING_DEST_FIELD_NAME: {
                                             "type": "knn_vector",
