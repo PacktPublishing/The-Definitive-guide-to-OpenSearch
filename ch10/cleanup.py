@@ -21,6 +21,7 @@ Notes:
     - Training indices are deleted after their target indices
 """
 import argparse
+import connector_utils
 from copy import deepcopy
 import opensearchpy
 from os_client_factory import OSClientFactory
@@ -55,7 +56,6 @@ IVF_PQ_TRAINING = 'ivf_pq_training'
 IVF_TRAINING_MODEL_NAME = 'ivf_model'
 IVF_PQ_TRAINING_MODEL_NAME = 'ivf_pq_model'
 
-
 def delete_indices(os_client: opensearchpy.OpenSearch):
   logging.warning("This script uses hard-coded index and training model names"
                   "If you have made any changes to these index names, also"
@@ -86,7 +86,27 @@ def delete_indices(os_client: opensearchpy.OpenSearch):
     logging.info(f'Model {IVF_PQ_TRAINING_MODEL_NAME} not found, skipping')
 
 
-def main(clean_models=False, clean_indices=False):
+def delete_connectors(os_client: opensearchpy.OpenSearch):
+  connector_id = connector_utils.connector_id_for(os_client=os_client,
+                                                  connector_name='Amazon Bedrock')
+  while connector_id:
+    logging.info(f'Deleting model for connector {connector_id}')
+    model_id = connector_utils.connector_model_id(os_client=os_client,
+                                                  connector_id=connector_id)
+    logging.info(f'Model id "{model_id}"')
+    os_client.transport.perform_request('POST', f'/_plugins/_ml/models/{model_id}/_undeploy')
+    # This sleep prevents overwhelming the cluster with too many tasks and
+    # responding with HTTP status 429
+    time.sleep(1)
+    os_client.transport.perform_request('DELETE', f'/_plugins/_ml/models/{model_id}')
+
+    logging.info(f'Deleting connector {connector_id}')
+    os_client.transport.perform_request('DELETE', f'/_plugins/_ml/connectors/{connector_id}')
+    connector_id = connector_utils.connector_id_for(os_client=os_client,
+                                                    connector_name='Amazon Bedrock')
+
+
+def main(clean_models=False, clean_indices=False, clean_connectors=False):
   os_client = OSClientFactory().client()
   if clean_models:
     logging.info("Deleting models")
@@ -94,6 +114,9 @@ def main(clean_models=False, clean_indices=False):
   if clean_indices:
     logging.info("Deleting indices")
     delete_indices(os_client)
+  if clean_connectors:
+    logging.info("Deleting connectors")
+    delete_connectors(os_client)
   logging.info("Done!")
 
 
@@ -110,7 +133,9 @@ if __name__ == "__main__":
   )
   parser.add_argument("--models", default=False, action="store_true")
   parser.add_argument("--indices", default=False, action="store_true")
+  parser.add_argument("--connectors", default=False, action="store_true")
 
   args = parser.parse_args()
   main(clean_models=args.models,
-       clean_indices=args.indices)
+       clean_indices=args.indices,
+       clean_connectors=args.connectors)
