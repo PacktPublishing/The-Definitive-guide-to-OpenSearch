@@ -34,6 +34,11 @@ OPENSEARCH_AUTH = (os.environ.get('OPENSEARCH_ADMIN_USER', 'admin'),
                    os.environ.get('OPENSEARCH_ADMIN_PASSWORD', ''))
 
 
+# IMPORTANT! Make sure that you set up Bedrock model access for the region you
+# specify here!
+AWS_REGION = os.environ.get('AWS_REGION', 'us-west-2')
+
+
 class OSClientFactory:
   """
   Factory class for creating and configuring OpenSearch clients.

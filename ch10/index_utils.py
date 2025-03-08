@@ -32,7 +32,6 @@ Warning!
 
 from copy import deepcopy
 import logging
-import time
 
 
 # The base mapping doesn't contain a knn field, or an embedding source field.
@@ -79,7 +78,11 @@ BASE_SETTINGS = {
     }}}
 
 
-def delete_then_create_index(os_client, index_name, pipeline_name, additional_fields):
+def delete_then_create_index(os_client, 
+                             index_name=None,
+                             ingest_pipeline_name=None,
+                             search_pipeline_name=None,
+                             additional_fields=None):
   # Delete the existing index
   if os_client.indices.exists(index_name):
     logging.info(f'Deleting existing index {index_name}')
@@ -87,7 +90,9 @@ def delete_then_create_index(os_client, index_name, pipeline_name, additional_fi
 
   # Construct settings
   settings = deepcopy(BASE_SETTINGS)
-  settings['settings']['default_pipeline'] = pipeline_name
+  settings['settings']['default_pipeline'] = ingest_pipeline_name
+  if search_pipeline_name:
+    settings['settings']['search.default_pipeline'] = search_pipeline_name
   if additional_fields:
     settings['mappings']['properties'].update(additional_fields)
 
