@@ -91,7 +91,7 @@ def delete_connectors(os_client: opensearchpy.OpenSearch):
                                                   connector_name='Amazon Bedrock')
   while connector_id:
     logging.info(f'Deleting model for connector {connector_id}')
-    model_id = connector_utils.connector_model_id(os_client=os_client,
+    model_id = connector_utils.connector_model_id_for_connector(os_client=os_client,
                                                   connector_id=connector_id)
     logging.info(f'Model id "{model_id}"')
     os_client.transport.perform_request('POST', f'/_plugins/_ml/models/{model_id}/_undeploy')
