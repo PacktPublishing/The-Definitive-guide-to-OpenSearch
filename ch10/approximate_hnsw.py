@@ -102,11 +102,51 @@ simple_ann_query={
 }}}}
 
 
+# Definition for the hybrid search pipeline. It specifies the normalization and
+# combination methods applied to the results of the hybrid queries.
+#
+# Experiment with the ratio of lexical and vector by adjusting the weights. The
+# weights' order matches the hybrid query's clauses. The first is the match
+# query, the second is the neural query
+HYBRID_PIPELINE_NAME = 'hybrid_pipeline'
+hybrid_pipeline_definition = {
+  "phase_results_processors": [
+    {
+      "normalization-processor": {
+        "normalization": {
+          "technique": "min_max"
+        },
+        "combination": {
+          "technique": "arithmetic_mean",
+          "parameters": {
+            "weights": [
+              0.4,
+              0.6
+]}}}}]}
+
+
+# A hybrid query 
+hybrid_query={
+  "query": {
+    "hybrid": {
+      "queries": [
+        {
+          "match": { "title": { "query": "" }}
+        },
+        {
+          "neural": {
+            EMBEDDING_FIELD_NAME: {
+              "query_text": "",
+              "k": 10,
+              "model_id": ""
+}}}]}}}
+        
+
 # Main function. Finds or loads the embedding model, creates the index (unless
 # --skip-indexing is a command-line paramater), creates an embedding for the
 # query "Sci-fi about the force and jedis" and then runs the exact query and
 # prints the search response.
-def main(skip_indexing=False, user_query=None):
+def main(skip_indexing=False, hybrid=False, user_query=None):
   # See os_client_factory.py for details on the set up for the opensearch-py
   # client.
   os_client = OSClientFactory().client()
@@ -149,15 +189,34 @@ def main(skip_indexing=False, user_query=None):
   else:
     logging.info(f"Skipping indexing")
 
-  # Run a query. Calls the LLM to generate a vector embedding for the user query
-  # (see model_utils.py) and then adds that embedding to the OpenSearch query.
+  # Run the query. If it's a hybrid query, set up the search pipeline first. The
+  # hybrid query is a combined lexical and vector query. The vector query is a
+  # neural query, which automatically encodes the query text as a vector
   logging.info(f"Running query")
-  query = deepcopy(simple_ann_query)
-  query_embedding = model_utils.create_embedding(os_client, model_id, user_query)
+  if hybrid:
+    # Create a search pipeline for the two-phase, neural processor
+    os_client.transport.perform_request(
+      'PUT', f'/_search/pipeline/{HYBRID_PIPELINE_NAME}',
+      body=hybrid_pipeline_definition)
+    # Replace placeholders with values
+    query = deepcopy(hybrid_query)
+    query['query']['hybrid']['queries'][0]['match']['title']['query'] = \
+      user_query if user_query else "Sci-fi about the force and jedis"
+    query['query']['hybrid']['queries'][1]['neural'][EMBEDDING_FIELD_NAME]['model_id'] = \
+      model_id
+    query['query']['hybrid']['queries'][1]['neural'][EMBEDDING_FIELD_NAME]['query_text'] = \
+      user_query if user_query else "Sci-fi about the force and jedis"
+    # Run the query. This uses the search_pipeline parameter to engage the
+    # pipeline
+    response = os_client.search(index=INDEX_NAME, body=query,
+                                search_pipeline=HYBRID_PIPELINE_NAME)
+  else:
+    query = deepcopy(simple_ann_query)
+    query_embedding = model_utils.create_embedding(os_client, model_id, user_query)
 
-  expr = jsonpath_ng.ext.parser.parse(f'query.knn.{EMBEDDING_FIELD_NAME}.vector')
-  query = expr.update(query, query_embedding)
-  response = os_client.search(index=INDEX_NAME, body=query)
+    expr = jsonpath_ng.ext.parser.parse(f'query.knn.{EMBEDDING_FIELD_NAME}.vector')
+    query = expr.update(query, query_embedding)
+    response = os_client.search(index=INDEX_NAME, body=query)
 
   # Print the search response.
   logging.info(f"Query response")
@@ -181,8 +240,10 @@ if __name__ == "__main__":
       " to skip the from-scratch creation of the index.",
   )
   parser.add_argument("--skip-indexing", default=False, action="store_true")
+  parser.add_argument("--hybrid", default=False, action="store_true")
   parser.add_argument("--query", default="Sci-fi about the force and jedis",
                       action="store")
   args = parser.parse_args()
   main(skip_indexing=args.skip_indexing,
+       hybrid=args.hybrid,
        user_query=args.query)
