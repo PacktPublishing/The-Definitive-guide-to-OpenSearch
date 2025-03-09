@@ -17,7 +17,6 @@ import opensearchpy.helpers
 
 # Defines the index and pipelines created by the script.
 INDEX_NAME = 'sparse_movies'
-PIPELINE_NAME = 'sparse_pipeline'
 
 # Set the bulk size. If your indexing requests are timing out, make this
 # smaller.
@@ -59,6 +58,7 @@ KNN_FIELDS = {
 # Definition for the ingest pipeline. Maps the EMBEDDING_SOURCE_FIELD to the
 # EMBEDDING_FIELD. OpenSearch neural plugin uses these fields for creating the
 # embedding as you ingest data.
+INGEST_PIPELINE_NAME = 'sparse_ingest_pipeline'
 ingest_pipeline_definition = {
   "description": "Sparse encoding ingest pipeline",
   "processors": [
@@ -70,6 +70,19 @@ ingest_pipeline_definition = {
         "field_map": {
           EMBEDDING_SOURCE_FIELD_NAME: EMBEDDING_FIELD_NAME
         }
+      }
+    }
+  ]
+}
+
+
+SEARCH_PIPELINE_NAME = 'sparse_search_pipeline'
+search_pipeline_definition = {
+  "description": "Two-phase sparse search",
+  "request_processors": [
+    {
+      "neural_sparse_two_phase_processor": {
+        "enabled": True
       }
     }
   ]
@@ -123,14 +136,20 @@ def main(skip_indexing=False, bi_encoder=False, doc_only=False, user_query=None)
     # Create an ingest pipeline
     pipeline_definition = deepcopy(ingest_pipeline_definition)
     pipeline_definition['processors'][0]['sparse_encoding']['model_id'] = model_id
-    os_client.ingest.put_pipeline(id=PIPELINE_NAME, body=pipeline_definition)
+    os_client.ingest.put_pipeline(id=INGEST_PIPELINE_NAME, body=pipeline_definition)
+
+    # Create a search pipeline for the two-phase, neural processor
+    os_client.transport.perform_request(
+      'PUT', f'/_search/pipeline/{SEARCH_PIPELINE_NAME}',
+      body=search_pipeline_definition)
 
     # Create an index with the pipeline
     logging.info(f"Creating index {INDEX_NAME}")
     index_utils.delete_then_create_index(
       os_client=os_client,
       index_name=INDEX_NAME,
-      ingest_pipeline_name=PIPELINE_NAME,
+      ingest_pipeline_name=INGEST_PIPELINE_NAME,
+      search_pipeline_name=SEARCH_PIPELINE_NAME,
       additional_fields=KNN_FIELDS
     )
 
