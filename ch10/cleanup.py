@@ -50,14 +50,15 @@ APPROXIMATE_FAISS_SQ = 'approximate_movies_sq'
 APPROXIMATE_HNSW = 'approximate_movies_hnsw'
 APPROXIMATE_IVF = 'approximate_movies_ivf'
 APPROXIMATE_IVF_PQ = 'approximate_movies_ivf_pq'
+APPROXIMATE_ON_DISK = 'approximate_on_disk'
+CONVERSATIONAL_MOVIES = 'conversational_movies'
 EXACT = 'exact_movies'
 IVF_TRAINING = 'ivf_training'
 IVF_PQ_TRAINING = 'ivf_pq_training'
-CONVERSATIONAL_MOVIES = 'conversational_movies'
-
 # Training models 
 IVF_TRAINING_MODEL_NAME = 'ivf_model'
 IVF_PQ_TRAINING_MODEL_NAME = 'ivf_pq_model'
+
 
 def delete_indices(os_client: opensearchpy.OpenSearch):
   logging.warning("This script uses hard-coded index and training model names "
@@ -67,8 +68,9 @@ def delete_indices(os_client: opensearchpy.OpenSearch):
                      APPROXIMATE_HNSW,
                      APPROXIMATE_IVF,
                      APPROXIMATE_IVF_PQ,
-                     EXACT,
+                     APPROXIMATE_ON_DISK,
                      CONVERSATIONAL_MOVIES,
+                     EXACT,
                      # Important to delete these after their target indices!
                      IVF_TRAINING,
                      IVF_PQ_TRAINING,
