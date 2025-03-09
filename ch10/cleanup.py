@@ -53,18 +53,22 @@ APPROXIMATE_IVF_PQ = 'approximate_movies_ivf_pq'
 EXACT = 'exact_movies'
 IVF_TRAINING = 'ivf_training'
 IVF_PQ_TRAINING = 'ivf_pq_training'
+CONVERSATIONAL_MOVIES = 'conversational_movies'
+
+# Training models 
 IVF_TRAINING_MODEL_NAME = 'ivf_model'
 IVF_PQ_TRAINING_MODEL_NAME = 'ivf_pq_model'
 
 def delete_indices(os_client: opensearchpy.OpenSearch):
-  logging.warning("This script uses hard-coded index and training model names"
-                  "If you have made any changes to these index names, also"
+  logging.warning("This script uses hard-coded index and training model names "
+                  "If you have made any changes to these index names, also "
                   "update the clean_up script to match them.")
   for index_name in [APPROXIMATE_FAISS_SQ,
                      APPROXIMATE_HNSW,
                      APPROXIMATE_IVF,
                      APPROXIMATE_IVF_PQ,
                      EXACT,
+                     CONVERSATIONAL_MOVIES,
                      # Important to delete these after their target indices!
                      IVF_TRAINING,
                      IVF_PQ_TRAINING,
