@@ -4,7 +4,6 @@ import boto3
 import copy
 import connector_utils
 import index_utils
-import json
 import logging
 import movie_source
 from os_client_factory import OSClientFactory, AWS_REGION
@@ -38,20 +37,21 @@ CONNECTOR_BODY = {
   "version": 1,
   "protocol": "aws_sigv4",
   "credential": '',
+  "interface": {},
   "parameters": {
-      "region": f"{AWS_REGION}",
-      "service_name": "bedrock",
-      "model": "anthropic.claude-v2"
+    "region": f"{AWS_REGION}",
+    "service_name": "bedrock",
+    "model": "anthropic.claude-v2"
   },
   "actions": [
       {
-          "action_type": "predict",
-          "method": "POST",
-          "headers": {
-              "content-type": "application/json"
-          },
-          "url": "https://bedrock-runtime.${parameters.region}.amazonaws.com/model/${parameters.model}/invoke",
-          "request_body": "{\"prompt\":\"\\n\\nHuman: ${parameters.inputs}\\n\\nAssistant:\",\"max_tokens_to_sample\":300,\"temperature\":0.5,\"top_k\":250,\"top_p\":1,\"stop_sequences\":[\"\\\\n\\\\nHuman:\"]}"
+        "action_type": "predict",
+        "method": "POST",
+        "headers": {
+            "content-type": "application/json"
+        },
+        "url": "https://bedrock-runtime.${parameters.region}.amazonaws.com/model/${parameters.model}/invoke",
+        "request_body": "{\"prompt\":\"\\n\\nHuman: ${parameters.inputs}\\n\\nAssistant:\",\"max_tokens_to_sample\":300,\"temperature\":0.5,\"top_k\":250,\"top_p\":1,\"stop_sequences\":[\"\\\\n\\\\nHuman:\"]}"
       }
   ]
 }
@@ -66,7 +66,7 @@ SEARCH_PIPELINE_BODY={
         "tag": "conversation demo",
         "description": "Demo pipeline Using Bedrock Connector",
         "model_id": '', # This is the model id for the connector
-        "context_field_list": ["embedding_source"],
+        "context_field_list": ["plot", "title"],
         "system_prompt": "You are a helpful assistant",
         "user_instructions": "Generate a concise and informative answer in less than 300 "
                              "words for the given question, using information from the "
@@ -142,6 +142,11 @@ def main(skip_indexing=False):
   # client. 
   os_client = OSClientFactory().client()
 
+  # The conversation memory is automatically maintained by the search
+  # processor. The id is injected into the query processor before the query is
+  # executed
+  conversation_memory_id = create_conversation_memory(os_client)
+
   if not skip_indexing:
     # Set up the connector for Amazon Bedrock. This uses the default profile
     # for the AWS CLI. If you want to use a different profile, you can
@@ -180,11 +185,6 @@ def main(skip_indexing=False):
     search_pipeline_body = copy.deepcopy(SEARCH_PIPELINE_BODY)
     search_pipeline_body['response_processors'][0]['retrieval_augmented_generation']['model_id'] = model_id
     create_search_pipeline(os_client, SEARCH_PIPELINE_NAME, search_pipeline_body)
-
-    # The conversation memory is automatically maintained by the search
-    # processor. The id is injected into the query processor before the query is
-    # executed
-    conversation_memory_id = create_conversation_memory(os_client)
 
     # Create the index. The search pipeline defined above is the default
     # pipeline for this index. All queries that go to the index will run this
