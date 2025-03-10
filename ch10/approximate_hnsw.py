@@ -1,21 +1,28 @@
-"""
-A script for creating and querying an approximate k-NN search index using
-OpenSearch's FAISS HNSW implementation.
+"""Approximate k-NN search implementation using HNSW algorithm in OpenSearch.
 
-This module demonstrates approximate k-NN search functionality using movie data
-and vector embeddings. It handles the creation of an OpenSearch index with HNSW
-(Hierarchical Navigable Small World) configuration, sets up an ingest pipeline
-for automatic embedding generation, and performs vector similarity searches.
+This module demonstrates approximate k-NN search using Hierarchical Navigable Small
+World (HNSW) graphs with the FAISS engine in OpenSearch. It includes functionality
+for indexing movie data and performing both pure vector and hybrid searches.
 
 Key Features:
-    - Creates an OpenSearch index with HNSW vector search capabilities
-    - Configures and deploys a text embedding model
-    - Sets up an ingest pipeline for automatic embedding generation
-    - Indexes movie data with vector embeddings
-    - Performs approximate k-NN queries
+    - HNSW-based vector search using FAISS engine
+    - Automatic text embedding generation during indexing
+    - Support for hybrid search combining lexical and vector queries
+    - Configurable search parameters including M (max connections) and ef values
 
-Command-line Arguments:
-    --skip-indexing: Skip the index creation and data ingestion
+Main Components:
+    - Index creation with HNSW configuration
+    - Ingest pipeline for automatic embedding generation
+    - Vector search using k-NN query
+    - Hybrid search combining neural and text-based matching
+    - Search result normalization and score combination
+
+Configuration:
+    - INDEX_NAME: Name of the OpenSearch index
+    - PIPELINE_NAME: Name of the ingest pipeline
+    - BULK_SIZE: Number of documents per bulk indexing request
+    - MODEL_SHORT_NAME: Name of the embedding model
+    - FAISS_HNSW_FIELD: HNSW algorithm configuration
 """
 import argparse
 from auto_incrementing_counter import AutoIncrementingCounter
