@@ -1,0 +1,417 @@
+{
+  "$schema": "https://vega.github.io/schema/vega/v5.json",
+  "description": "Sankey diagram showing flow from source to destination locations",
+  "padding": 5,
+
+  "data": [
+    {
+      "name": "raw_data",
+      "url": {
+        "%context%": true,
+        "index": "opensearch_dashboards_sample_data_logs",
+        "body": {
+          "_source": ["geo.src", "geo.dest", "bytes"],
+          "size": 10000
+        }
+      },
+      "format": {"property": "hits.hits"},
+      "transform": [
+        {
+          "type": "filter",
+          "expr": "datum._source && datum._source.geo && datum._source.geo.src && datum._source.geo.dest && datum._source.bytes != null"
+        },
+        {
+          "type": "formula",
+          "expr": "datum._source.geo.src",
+          "as": "source"
+        },
+        {
+          "type": "formula",
+          "expr": "datum._source.geo.dest",
+          "as": "target"
+        },
+        {
+          "type": "formula",
+          "expr": "datum._source.bytes",
+          "as": "value"
+        }
+      ]
+    },
+    {
+      "name": "top_sources",
+      "source": "raw_data",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": ["source"],
+          "fields": ["value"],
+          "ops": ["sum"],
+          "as": ["total_bytes"]
+        },
+        {
+          "type": "window",
+          "sort": {"field": "total_bytes", "order": "descending"},
+          "ops": ["row_number"],
+          "as": ["rank"]
+        },
+        {
+          "type": "filter",
+          "expr": "datum.rank <= 10"
+        }
+      ]
+    },
+    {
+      "name": "top_destinations",
+      "source": "raw_data",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": ["target"],
+          "fields": ["value"],
+          "ops": ["sum"],
+          "as": ["total_bytes"]
+        },
+        {
+          "type": "window",
+          "sort": {"field": "total_bytes", "order": "descending"},
+          "ops": ["row_number"],
+          "as": ["rank"]
+        },
+        {
+          "type": "filter",
+          "expr": "datum.rank <= 10"
+        }
+      ]
+    },
+    {
+      "name": "filtered_data",
+      "source": "raw_data",
+      "transform": [
+        {
+          "type": "lookup",
+          "from": "top_sources",
+          "key": "source",
+          "fields": ["source"],
+          "as": ["source_match"]
+        },
+        {
+          "type": "lookup",
+          "from": "top_destinations",
+          "key": "target",
+          "fields": ["target"],
+          "as": ["target_match"]
+        },
+        {
+          "type": "filter",
+          "expr": "datum.source_match != null && datum.target_match != null"
+        }
+      ]
+    },
+    {
+      "name": "flows",
+      "source": "filtered_data",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": ["source", "target"],
+          "fields": ["value"],
+          "ops": ["sum"],
+          "as": ["flow_value"]
+        },
+        {
+          "type": "filter",
+          "expr": "datum.flow_value > 0"
+        }
+      ]
+    },
+    {
+      "name": "nodes",
+      "source": "flows",
+      "transform": [
+        {
+          "type": "formula",
+          "expr": "[datum.source, datum.target]",
+          "as": "node_list"
+        },
+        {
+          "type": "flatten",
+          "fields": ["node_list"],
+          "as": ["node"]
+        },
+        {
+          "type": "aggregate",
+          "groupby": ["node"],
+          "ops": ["count"],
+          "as": ["count"]
+        },
+        {
+          "type": "window",
+          "sort": {"field": "node"},
+          "ops": ["row_number"],
+          "as": ["index"]
+        },
+        {
+          "type": "formula",
+          "expr": "datum.index - 1",
+          "as": "node_id"
+        }
+      ]
+    },
+    {
+      "name": "source_nodes",
+      "source": "flows",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": ["source"],
+          "fields": ["flow_value"],
+          "ops": ["sum"],
+          "as": ["total_out"]
+        },
+        {
+          "type": "lookup",
+          "from": "nodes",
+          "key": "node",
+          "fields": ["source"],
+          "as": ["node_info"]
+        },
+        {
+          "type": "formula",
+          "expr": "datum.node_info.node_id",
+          "as": "source_id"
+        },
+        {
+          "type": "formula",
+          "expr": "0",
+          "as": "node_type"
+        },
+        {
+          "type": "window",
+          "sort": {"field": "total_out", "order": "descending"},
+          "ops": ["row_number"],
+          "as": ["y_order"]
+        }
+      ]
+    },
+    {
+      "name": "target_nodes",
+      "source": "flows",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": ["target"],
+          "fields": ["flow_value"],
+          "ops": ["sum"],
+          "as": ["total_in"]
+        },
+        {
+          "type": "lookup",
+          "from": "nodes",
+          "key": "node",
+          "fields": ["target"],
+          "as": ["node_info"]
+        },
+        {
+          "type": "formula",
+          "expr": "datum.node_info.node_id",
+          "as": "target_id"
+        },
+        {
+          "type": "formula",
+          "expr": "1",
+          "as": "node_type"
+        },
+        {
+          "type": "window",
+          "sort": {"field": "total_in", "order": "descending"},
+          "ops": ["row_number"],
+          "as": ["y_order"]
+        }
+      ]
+    },
+    {
+      "name": "links",
+      "source": "flows",
+      "transform": [
+        {
+          "type": "lookup",
+          "from": "source_nodes",
+          "key": "source",
+          "fields": ["source"],
+          "as": ["source_info"]
+        },
+        {
+          "type": "lookup",
+          "from": "target_nodes",
+          "key": "target",
+          "fields": ["target"],
+          "as": ["target_info"]
+        },
+        {
+          "type": "formula",
+          "expr": "datum.source_info.source_id",
+          "as": "source_id"
+        },
+        {
+          "type": "formula",
+          "expr": "datum.target_info.target_id",
+          "as": "target_id"
+        }
+      ]
+    }
+  ],
+
+  "scales": [
+    {
+      "name": "y_source",
+      "type": "point",
+      "domain": {"data": "source_nodes", "field": "y_order"},
+      "range": [50, 350],
+      "padding": 0.1
+    },
+    {
+      "name": "y_target",
+      "type": "point",
+      "domain": {"data": "target_nodes", "field": "y_order"},
+      "range": [50, 350],
+      "padding": 0.1
+    },
+    {
+      "name": "link_width",
+      "type": "linear",
+      "domain": {"data": "flows", "field": "flow_value"},
+      "range": [1, 20]
+    },
+    {
+      "name": "node_height_source",
+      "type": "linear",
+      "domain": {"data": "source_nodes", "field": "total_out"},
+      "range": [5, 30]
+    },
+    {
+      "name": "node_height_target",
+      "type": "linear",
+      "domain": {"data": "target_nodes", "field": "total_in"},
+      "range": [5, 30]
+    },
+    {
+      "name": "color",
+      "type": "ordinal",
+      "domain": {"data": "flows", "field": "source"},
+      "range": {"scheme": "category20"}
+    }
+  ],
+
+  "marks": [
+    {
+      "type": "rect",
+      "from": {"data": "source_nodes"},
+      "encode": {
+        "enter": {
+          "x": {"value": 50},
+          "y": {"scale": "y_source", "field": "y_order", "offset": -10},
+          "width": {"value": 20},
+          "height": {"scale": "node_height_source", "field": "total_out"},
+          "fill": {"value": "#4682b4"},
+          "stroke": {"value": "#2c5282"},
+          "strokeWidth": {"value": 1}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "from": {"data": "target_nodes"},
+      "encode": {
+        "enter": {
+          "x": {"value": 530},
+          "y": {"scale": "y_target", "field": "y_order", "offset": -10},
+          "width": {"value": 20},
+          "height": {"scale": "node_height_target", "field": "total_in"},
+          "fill": {"value": "#4682b4"},
+          "stroke": {"value": "#2c5282"},
+          "strokeWidth": {"value": 1}
+        }
+      }
+    },
+    {
+      "type": "path",
+      "from": {"data": "links"},
+      "encode": {
+        "enter": {
+          "path": {
+            "signal": "'M 70 ' + scale('y_source', datum.source_info.y_order) + ' C 300 ' + scale('y_source', datum.source_info.y_order) + ' 300 ' + scale('y_target', datum.target_info.y_order) + ' 530 ' + scale('y_target', datum.target_info.y_order)"
+          },
+          "stroke": {"scale": "color", "field": "source"},
+          "strokeWidth": {"scale": "link_width", "field": "flow_value"},
+          "strokeOpacity": {"value": 0.6},
+          "fill": {"value": "transparent"}
+        },
+        "hover": {
+          "strokeOpacity": {"value": 0.9}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "from": {"data": "source_nodes"},
+      "encode": {
+        "enter": {
+          "x": {"value": 45},
+          "y": {"scale": "y_source", "field": "y_order"},
+          "text": {"field": "source"},
+          "fontSize": {"value": 10},
+          "fontWeight": {"value": "bold"},
+          "align": {"value": "right"},
+          "baseline": {"value": "middle"},
+          "fill": {"value": "#333"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "from": {"data": "target_nodes"},
+      "encode": {
+        "enter": {
+          "x": {"value": 555},
+          "y": {"scale": "y_target", "field": "y_order"},
+          "text": {"field": "target"},
+          "fontSize": {"value": 10},
+          "fontWeight": {"value": "bold"},
+          "align": {"value": "left"},
+          "baseline": {"value": "middle"},
+          "fill": {"value": "#333"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "encode": {
+        "enter": {
+          "x": {"value": 60},
+          "y": {"value": 30},
+          "text": {"value": "Source"},
+          "fontSize": {"value": 14},
+          "fontWeight": {"value": "bold"},
+          "align": {"value": "center"},
+          "baseline": {"value": "middle"},
+          "fill": {"value": "#333"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "encode": {
+        "enter": {
+          "x": {"value": 540},
+          "y": {"value": 30},
+          "text": {"value": "Destination"},
+          "fontSize": {"value": 14},
+          "fontWeight": {"value": "bold"},
+          "align": {"value": "center"},
+          "baseline": {"value": "middle"},
+          "fill": {"value": "#333"}
+        }
+      }
+    }
+  ]
+}
