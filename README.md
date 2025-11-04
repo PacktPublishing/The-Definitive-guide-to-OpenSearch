@@ -13,7 +13,7 @@ Discover advanced techniques and best practices for efficient search and analyti
 Jon Handler, Soujanya Konka, Prashant Agrawal</p>
 
 <p align="center">
-   <a href="https://packt.link/5D2c3" alt="Discord" title="Learn more on the Discord server"><img width="32px" src="https://cliply.co/wp-content/uploads/2021/08/372108630_DISCORD_LOGO_400.gif"/></a>
+   <a href="https://packt.link/XOjRT" alt="Discord" title="Learn more on the Discord server"><img width="32px" src="https://cliply.co/wp-content/uploads/2021/08/372108630_DISCORD_LOGO_400.gif"/></a>
   &#8287;&#8287;&#8287;&#8287;&#8287;
   <a href="https://packt.link/free-ebook/9781835885789"><img width="32px" alt="Free PDF" title="Free PDF" src="https://cdn-icons-png.flaticon.com/512/4726/4726010.png"/></a>
  &#8287;&#8287;&#8287;&#8287;&#8287;
