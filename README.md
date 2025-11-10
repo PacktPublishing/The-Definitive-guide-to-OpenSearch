@@ -1,6 +1,3 @@
-
-<b><p align='center'>[![Packt Sale](https://static.packt-cdn.com/assets/images/packt+events/Improve_UX.png)](https://packt.link/algotradingpython)</p></b> 
-
 <h1 align="center">
 The Definitive Guide to OpenSearch</h1>
 <p align="center">This is the code repository for <a href ="https://www.packtpub.com/en-us/product/the-definitive-guide-to-opensearch-9781835885789"> The Definitive Guide to OpenSearch</a>, published by Packt.
