@@ -1,3 +1,5 @@
+<p align='center'><a href='https://www.packtpub.com/en-us/unlock?step=1'><img src='https://static.packt-cdn.com/assets/images/packt+events/finalGH_design_redeem.png'/></a></p>
+
 <h1 align="center">
 The Definitive Guide to OpenSearch</h1>
 <p align="center">This is the code repository for <a href ="https://www.packtpub.com/en-us/product/the-definitive-guide-to-opensearch-9781835885789"> The Definitive Guide to OpenSearch</a>, published by Packt.
